@@ -2,6 +2,7 @@
 import MDAnalysis as mda
 import subprocess
 import argparse
+import numpy as np
 
 parser = argparse.ArgumentParser(description='Osmotic shock simulator')
 parser.add_argument('-in','--input', help='mdp file with input data')
@@ -9,69 +10,201 @@ parser.add_argument('-f','--coordinates', help='gro file')
 parser.add_argument('-t','--topology', help='topology file')
 parser.add_argument('-r','--removed', type=int, help='nr of removed particles per shock')
 parser.add_argument('-nr','--number', type=int, help='total number of shocks')
+parser.add_argument('-w','--water', default='resname W', help='name of water particles')
+parser.add_argument('-b','--bins', type=int, default=25, help='increase bin size')
 args = parser.parse_args() 
 
 # %%
 
-def water_selecter(gro_file):
+def bin_converter(pos, boxdim, nrbins):
+    '''Assigns each coordinate to a bin of a chosen size'''
+    x = np.ceil(pos[:,0]/(boxdim[0]/nrbins[0]))
+    y = np.ceil(pos[:,1]/(boxdim[1]/nrbins[1]))
+    z = np.ceil(pos[:,2]/(boxdim[2]/nrbins[2]))
     
-    u = mda.Universe(gro_file)
-    lipid_atoms = u.select_atoms('not resname W')
-    water_atoms = u.select_atoms('resname W')
-    nr_lipid_atoms = len(lipid_atoms)
-    nr_water_atoms = len (water_atoms)
+    binsfloat = np.stack((x,y,z), axis=-1)
+    binsint = np.int_(binsfloat)
     
-    # Calculating the center of mass (z-coordinate) of both bilayers
-    top_atoms = lipid_atoms[int(nr_lipid_atoms/2):int(nr_lipid_atoms)]
-    bottom_atoms = lipid_atoms[0:int(nr_lipid_atoms/2)]
+    for i in binsint:
+        for u in range(3):
+            if i[u] > nrbins[u]:
+                i[u] = i[u] - nrbins[u]
+            if i[u] < 0:
+                i[u] = nrbins[u] + i[u]
+       
+    return binsint
 
-    upper_limit_z = top_atoms.centroid()[2]
-    lower_limit_z = bottom_atoms.centroid()[2]
+# %%
     
-    # Finding the indices of the water particles situated between the two bilayers
-    water_inside = []
+def multiples_remover(allbins):
+    '''Makes sure that each value appears only once in the list'''
+    bintuples = [tuple(row) for row in allbins]
+    binuniques = np.unique(bintuples, axis=0)
+    
+    return binuniques
 
-    for i in range(nr_water_atoms):
-        water_z_pos = water_atoms.positions[i][2]
-        if lower_limit_z < water_z_pos < upper_limit_z:
-            water_inside.append(i)
-
-      
-    return water_inside
+# %%
+    
+def bin_system_maker(lbins, nrbins):
+    '''A bin system is created in which 0 is a water bin and 1 is a lipid bin'''
+    bsystem = np.zeros((nrbins[0], nrbins[1], nrbins[2]))
+    
+    for i in lbins:
+        bsystem[i[0]-1][i[1]-1][i[2]-1] = 1
+    
+     
+    return bsystem
 
 # %%
 
-def water_remover_gro(old_gro, new_gro, positions):
-    
-    u = mda.Universe(old_gro)
-    removed_atoms_li = positions
-    water_atoms = u.select_atoms('resname W')
-    all_atoms = u.select_atoms('all')
-    nr_atoms = len(all_atoms)
-    nr_water_atoms = len (water_atoms)
-    no_water = nr_atoms - nr_water_atoms
-    
-    # Creating list of global indices of the atoms that have to be removed
-    removed_atoms_gi = []                             
-    for i in removed_atoms_li:
-        removed_atoms_gi.append(i + no_water)
-    removed_atoms_gi.append(-1)
-    
-    # Creating a new .gro file using the old .gro file and the positions of particles that have to be removed
-    keep_atoms = u.select_atoms('index 0')
-    for i in range(1,nr_atoms):
-        if i != removed_atoms_gi[0]:
-            number = 'index' + ' ' + str(i)
-            keep_atoms = keep_atoms + u.select_atoms(number)
-        else:
-            removed_atoms_gi.pop(0)
+def zero_finder(system):
+    ''''Finds the position of a zero in a cubic bin system. 0 is returned if no zero is found'''
+    zero = 0
+    for x in range(len(system)):
+        for y in range(len(system[x])):
+            for z in range(len(system[x][y])):
+                if system[x][y][z] == 0:
+                    zero = (x,y,z)
+    return zero
 
-    keep_atoms.write(new_gro)
+# %%
+
+def index_finder(w_all, w_clstr, nrremoved):
+    '''Of each element in w_clstr it returns the index in w_all, until enough particles have been collected'''
+    indices  = []
+    i = 0
+    while len(indices) < nrremoved:
+        bin_index = np.where((w_all[:,0] == w_clstr[i][0]) & (w_all[:,1] == w_clstr[i][1]) & (w_all[:,2] == w_clstr[i][2]))[0] 
+        for u in bin_index:
+            indices.append(int(u))
+        i = i + 1
+        
+    return indices[:nrremoved]
+
+# %%
+    
+def cluster_finder(binsystem, bindim):
+    '''Çlusters the zeros in binsystem and returns all found clusters'''
+    
+    binx = bindim[0]
+    biny = bindim[1]
+    binz = bindim[2]
+    
+    black_list = binsystem
+    cluster_list = []
+    
+    while zero_finder(black_list) != 0:
+        
+        next_start = zero_finder(black_list)
+        
+        gray_list = [next_start]
+        white_list = []
+        temp_list = []
+        
+        while len(gray_list) > 0:
+            for u in gray_list:
+                if u[0] < (binx - 1):
+                    
+                    if black_list[u[0] + 1][u[1]][u[2]] == 0:
+                        temp_list.append((u[0] + 1, u[1], u[2]))
+                        black_list[u[0] + 1][u[1]][u[2]] = -1
+                        
+                if u[0] > 0:
+                    
+                    if black_list[u[0] - 1][u[1]][u[2]] == 0:
+                        temp_list.append((u[0] - 1, u[1], u[2]))
+                        black_list[u[0] - 1][u[1]][u[2]] = -1
+                        
+                if u[1] < (biny - 1):
+                    
+                    if black_list[u[0]][u[1] + 1][u[2]] == 0:
+                        temp_list.append((u[0], u[1] + 1, u[2]))
+                        black_list[u[0]][u[1] + 1][u[2]] = -1
+                        
+                if u[1] > 0:
+                    
+                    if black_list[u[0]][u[1] - 1][u[2]] == 0:
+                        temp_list.append((u[0], u[1] - 1, u[2]))
+                        black_list[u[0]][u[1] - 1][u[2]] = -1
+                        
+                if u[2] < (binz - 1):
+                    
+                    if black_list[u[0]][u[1]][u[2] + 1] == 0:
+                        temp_list.append((u[0], u[1], u[2] + 1))
+                        black_list[u[0]][u[1]][u[2] + 1] = -1
+                        
+                if u[2] > 0:
+                    
+                    if black_list[u[0]][u[1]][u[2] - 1] == 0:
+                        temp_list.append((u[0], u[1], u[2] - 1))
+                        black_list[u[0]][u[1]][u[2] - 1] = -1
+                white_list.append(u)
+                black_list[u[0]][u[1]][u[2]] = -1
+                
+            gray_list = temp_list
+            temp_list = []
+        cluster_list.append(white_list)
+    
+    
+    return cluster_list
+
+# %%
+
+def cluster_selecter(clist, nrbins):
+    ''''Selects the relevant cluster'''
+    
+    target_cluster = []
+    for i in range(len(clist)):
+        if (0,0,0) not in clist[i] and (nrbins[0]-1, nrbins[1]-1, nrbins[2]-1) not in clist[i]:
+            target_cluster = target_cluster + clist[i]
+    
+            
+    return target_cluster
+
+# %%
+    
+def water_selecter(lipids, water, nrbins, boxdim, nrremoved):
+    '''Selects the incides of the water particles that have to be removed'''
+    lipid_bins = bin_converter(lipids, boxdim, nrbins)
+    
+    lipid_bins_single = multiples_remover(lipid_bins)
+    
+    bin_system = bin_system_maker(lipid_bins_single, nrbins)
+    
+    clusters = cluster_finder(bin_system, nrbins)
+    
+    inner_water_cluster = cluster_selecter(clusters, nrbins)
+    
+    water_bins = bin_converter(water, boxdim, nrbins)
+    
+    removed = index_finder(water_bins, inner_water_cluster, nrremoved)
+    
+    return removed
+
+# %%
+
+def local_to_global(no_water, localindex):
+    ''''(local) indices found in the list of water particles are converted to global indices of the complete system list'''
+    global_index = []
+    for i in localindex:
+        global_index.append(i + no_water)
+        
+    return global_index
+
+# %%
+
+def not_string(positions):
+    '''A string is created of particle indices that have to be removed from the system'''
+    nstring = 'not index '
+    for i in positions:
+        nstring = nstring + str(i) + ' '
+        
+    return nstring
 
 # %%
 
 def water_remover_top(old, new, nr_removed):
-
+    '''Çreates a new topology file with the new number of water particles'''
     # The original topology file is modified to make sure it shows the correct number of W-particles
     with open(old) as cur_top:
         lines_top = cur_top.readlines()
@@ -99,6 +232,7 @@ def water_remover_top(old, new, nr_removed):
 # %%
 
 def top_name_generator(old, shock_nr):
+    '''Generates a name to save the top file every cycle'''
     no_ext = old.split('.')[0]
     new_top_name = no_ext + '_' + 's' + str(shock_nr) + '.top'
 
@@ -107,6 +241,7 @@ def top_name_generator(old, shock_nr):
 # %%
 
 def gro_name_generator(old, shock_nr):
+    '''Generates a name to save the gro file every cycle'''
     no_ext = old.split('.')[0]
     new_gro_name = no_ext + '_' + 's' + str(shock_nr) + '.gro'
     
@@ -115,6 +250,7 @@ def gro_name_generator(old, shock_nr):
 # %%
 
 def extension_remover(filename):
+    ''''Removes the extension of a filename'''
     sp = filename.split('.')
     no_ext = sp[0]
     return no_ext
@@ -133,6 +269,7 @@ def main():
         xtc_file = extension_remover(gro_file) + '.xtc'
         topology_file = args.topology
         topology_file_2 = extension_remover(topology_file) + '2.top'
+        water_name = args.water
         
         # Executing the actual simulation     
         grompp_command = 'gmx grompp -f ' + input_file + ' -c ' + gro_file  + ' -p ' + topology_file + ' -o ' + tpr_file
@@ -140,16 +277,35 @@ def main():
         subprocess.call(grompp_command, shell=True)
         subprocess.call(mdrun_command, shell=True)
         
-        # Remove old .gro file
-        remove_gro_command = 'rm ' + gro_file
-        subprocess.call(remove_gro_command, shell=True)
+        # The old .gro file is saved under a new (unique) name
+        gro_name = gro_name_generator(gro_file, shock)
+        g_name_change_command = 'mv ' + gro_file + ' ' + gro_name
+        subprocess.call(g_name_change_command, shell=True)
         
-        # Identifying the water particles inside
-        inner_water = water_selecter(gro_file_2)
+        # Variables needed for the calculations
+        u = mda.Universe(gro_file_2)
+        water_atoms = u.select_atoms(water_name)
+        water_pos = water_atoms.positions
+        target_lipids = u.select_atoms('name C3A C4A C3B C4B D2B D2A C2A C2B')
+        target_lipids_pos = target_lipids.positions
+        tj = u.trajectory[0]
+        box_dimensions = tj.dimensions
+        all_atoms = u.select_atoms('all')
+        nr_atoms = len(all_atoms)
+        nr_water_atoms = len(water_atoms)
+        no_water = nr_atoms - nr_water_atoms
+        bin_multiplier = (100-args.bins)/1000
+        nr_bins = [int(box_dimensions[0]*bin_multiplier),int(box_dimensions[1]*bin_multiplier),int(box_dimensions[2]*bin_multiplier)]
+        
+        # Identifying the indices of the water particles inside we want to remove
+        removed_atoms = water_selecter(target_lipids_pos, water_pos, nr_bins, box_dimensions, nr_removed_atoms)
+        global_indices = local_to_global(no_water, removed_atoms)
         
         # Removing water particles from the .gro file and the .top file
-        removed_atoms = inner_water[0:nr_removed_atoms]
-        water_remover_gro(gro_file_2, gro_file, removed_atoms)
+        remove_string = not_string(global_indices)
+        keep_atoms = u.select_atoms(remove_string)
+        keep_atoms.write(gro_file)
+        
         water_remover_top(topology_file, topology_file_2, nr_removed_atoms)
         
         # The old topology file is saved under a new (unique) name
@@ -164,12 +320,6 @@ def main():
         # We do not need the .xtc file
         remove_xtc_command = 'rm ' + xtc_file
         subprocess.call(remove_xtc_command, shell=True)
-        
-        # The old .gro file is saved under a new (unique) name
-        gro_name = gro_name_generator(gro_file_2, shock)
-        g_name_change_command = 'mv ' + gro_file_2 + ' ' + gro_name
-        subprocess.call(g_name_change_command, shell=True)
-        
         
 if __name__ == '__main__':
     main()
