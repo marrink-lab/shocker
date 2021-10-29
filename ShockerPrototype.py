@@ -3,15 +3,19 @@ import MDAnalysis as mda
 import subprocess
 import argparse
 import numpy as np
+import MDAnalysis.analysis.leaflet
 
 parser = argparse.ArgumentParser(description='Osmotic shock simulator')
 parser.add_argument('-in','--input', help='mdp file with input data')
 parser.add_argument('-f','--coordinates', help='gro file')
 parser.add_argument('-t','--topology', help='topology file')
 parser.add_argument('-r','--removed', type=int, help='nr of removed particles per shock')
-parser.add_argument('-nr','--number', type=int, help='total number of shocks')
+parser.add_argument('-e','--end', type=int, help='nr of the last cycle')
 parser.add_argument('-w','--water', default='resname W', help='name of water particles')
-parser.add_argument('-b','--bins', type=int, default=25, help='increase bin size')
+parser.add_argument('-b','--bins', type=int, default=0, help='increase or decrease the bin size (standard size is 1nm^3)')
+parser.add_argument('-s','--start', type=int, default=0, help='define the starting cycle')
+parser.add_argument('-x','--xtc', default='delete', help='save (save) xtc or not (delete)')
+parser.add_argument('-lip','--lipids', nargs='+', help='the names of the lipids the membrane consists of')
 args = parser.parse_args() 
 
 # %%
@@ -175,6 +179,8 @@ def water_selecter(lipids, water, nrbins, boxdim, nrremoved):
     
     inner_water_cluster = cluster_selecter(clusters, nrbins)
     
+    np.random.shuffle(inner_water_cluster)
+    
     water_bins = bin_converter(water, boxdim, nrbins)
     
     removed = index_finder(water_bins, inner_water_cluster, nrremoved)
@@ -245,7 +251,25 @@ def gro_name_generator(old, shock_nr):
     no_ext = old.split('.')[0]
     new_gro_name = no_ext + '_' + 's' + str(shock_nr) + '.gro'
     
-    return new_gro_name 
+    return new_gro_name
+
+# %%
+
+def xtc_name_generator(old, shock_nr):
+    '''Generates a name to save the xtc file every cycle'''
+    no_ext = old.split('.')[0]
+    new_xtc_name = no_ext + '_' + 's' + str(shock_nr) + '.xtc'
+    
+    return new_xtc_name 
+
+# %%
+
+def tpr_name_generator(old, shock_nr):
+    '''Generates a name to save the tpr file every cycle'''
+    no_ext = old.split('.')[0]
+    new_tpr_name = no_ext + '_' + 's' + str(shock_nr) + '.tpr'
+    
+    return new_tpr_name 
 
 # %%
 
@@ -256,11 +280,56 @@ def extension_remover(filename):
     return no_ext
 
 # %%
+    
+def l_particle_selector(lipidlist):
+    
+    lipids = lipidlist
+    tail_particles = []
+    
+    for lipid in lipids:
+        
+        with open('Martini3.LIB', 'r') as lipfile:
+            lines = lipfile.readlines()
+            for i in range(len(lines)):
+                name = lines[i].strip()[1:-1]
+                
+                if lipid == 'CHOL':
+                    tail_particles.append('C1 C2')
+                
+                elif name.replace(' ','') == lipid:
+                                        
+                    lipid_particles = []
+                    c = 1
+                    while lines[i+c] != '\n':
+                        lipid_particles.append(lines[i+c].split()[1])
+                        c = c + 1
+                    
+                    tail_length = int(lipid_particles[-1][1])
+                    tail_positions = [tail_length - 2, tail_length - 1, tail_length]
+                    
+                    for atom in lipid_particles:
+                        if atom[1] == str(tail_positions[0]) or atom[1] == str(tail_positions[1]) or atom[1] == str(tail_positions[2]):
+                            tail_particles.append(atom)
+                    
+    unique_tail_particles = []
+    for i in tail_particles:
+        if i not in unique_tail_particles:
+            unique_tail_particles.append(i)
+    
+    particle_string = ''
+    for i in unique_tail_particles:
+        particle_string = particle_string + ' ' + str(i)
+        
+    selection_command = 'name' + particle_string  
+    
+    return selection_command
+
+# %%
 
 def main():
     nr_removed_atoms = args.removed
     
-    for shock in range(args.number):
+    for shock in range(args.start, args.end):
         
         input_file = args.input
         gro_file = args.coordinates
@@ -286,7 +355,12 @@ def main():
         u = mda.Universe(gro_file_2)
         water_atoms = u.select_atoms(water_name)
         water_pos = water_atoms.positions
-        target_lipids = u.select_atoms('name C3A C4A C3B C4B D2B D2A C2A C2B')
+        
+        # Lipid particles used to define the lipid bins are selected
+        membrane_composition = args.lipids
+        lip_part_selection = l_particle_selector(membrane_composition)
+        target_lipids = u.select_atoms(lip_part_selection)
+        
         target_lipids_pos = target_lipids.positions
         tj = u.trajectory[0]
         box_dimensions = tj.dimensions
@@ -317,9 +391,25 @@ def main():
         rename_command = 'mv ' + topology_file_2 + ' ' + topology_file
         subprocess.call(rename_command, shell=True)
         
-        # We do not need the .xtc file
-        remove_xtc_command = 'rm ' + xtc_file
-        subprocess.call(remove_xtc_command, shell=True)
+        # Removing log file
+        subprocess.call('rm md.log', shell=True)
+        
+        # Saving or removing .xtc file
+        if args.xtc == 'save':
+            xtc_name = xtc_name_generator(xtc_file, shock)
+            x_name_change_command = 'mv ' + xtc_file + ' ' + xtc_name
+            subprocess.call(x_name_change_command, shell=True)
+        else:
+            remove_xtc_command = 'rm ' + xtc_file
+            subprocess.call(remove_xtc_command, shell=True)
+            
+        # Saving the .tpr file
+        tpr_name = tpr_name_generator(tpr_file, shock)
+        tpr_name_change_command = 'mv ' + tpr_file + ' ' + tpr_name
+        subprocess.call(tpr_name_change_command, shell=True)
+        
+        # Removing all other backups
+        subprocess.call('rm *#', shell=True)
         
 if __name__ == '__main__':
     main()
