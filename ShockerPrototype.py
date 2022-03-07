@@ -4,8 +4,10 @@ import subprocess
 import argparse
 import numpy as np
 import MDAnalysis.analysis.leaflet
+import os
+import pyvista as pv
 
-parser = argparse.ArgumentParser(description='Osmotic shock simulator')
+parser = argparse.ArgumentParser(description='Osmotic shock simulator', add_help=True)
 parser.add_argument('-in','--input', help='mdp file with input data')
 parser.add_argument('-f','--coordinates', help='gro file')
 parser.add_argument('-t','--topology', help='topology file')
@@ -14,8 +16,13 @@ parser.add_argument('-e','--end', type=int, help='nr of the last cycle')
 parser.add_argument('-w','--water', default='resname W', help='name of water particles')
 parser.add_argument('-b','--bins', type=int, default=0, help='increase or decrease the bin size (standard size is 1nm^3)')
 parser.add_argument('-s','--start', type=int, default=0, help='define the starting cycle')
-parser.add_argument('-x','--xtc', default='delete', help='save (save) xtc or not (delete)')
+parser.add_argument('-x','--xtc', type=int, default=0, help='frequency of storing position data (default = 0)')
 parser.add_argument('-lip','--lipids', nargs='+', help='the names of the lipids the membrane consists of')
+parser.add_argument('-it', '--iterations', type=int, default=100000, help='the number of iterations per cycle')
+parser.add_argument('-min','--enermin', default='no', help='energy minimization after each pumping cycle (yes or no)')
+parser.add_argument('-emnr', '--enernr', type=int, default=1, help='number of energy minimization rounds per cycle')
+parser.add_argument('-vd', '--vesdata', default='no', help='whether or not leaflet area and vesicle volume is calculated and stored each cycle')
+parser.add_argument('-cp', '--cloudpoints', default='GL1', help='defines which atoms are used to construct a triangulated surface of the vesicle')
 args = parser.parse_args() 
 
 # %%
@@ -234,42 +241,39 @@ def water_remover_top(old, new, nr_removed):
             
                 with open(new, 'a') as new_top:
                     new_top.write(new_string_water)
+                    
+# %%
+                    
+def mdp_value_changer(old, nr_its, valnm):
+    '''Changes value in mdp file'''
+    with open(old) as cur_mdp:
+            lines_mdp = cur_mdp.readlines()
+            nr_mdp_lines = len(lines_mdp)
+            for i in range(nr_mdp_lines):
+                spl = lines_mdp[i].split(' ')
+                if spl[0] != valnm:
+                    with open('new.mdp', 'a') as new_mdp:
+                        new_mdp.write(lines_mdp[i])
+                else:
+                    spl[-1] = str(nr_its) + '\n'
+                    new_spl = ' '.join(spl)
+                    with open('new.mdp', 'a') as new_mdp:
+                        new_mdp.write(new_spl)
+
+    mdp_remove_command = 'rm ' + old
+    mdp_name_change_command = 'mv ' + 'new.mdp ' + old                   
+
+    subprocess.call(mdp_remove_command, shell=True)                   
+    subprocess.call(mdp_name_change_command, shell=True)
 
 # %%
 
-def top_name_generator(old, shock_nr):
+def name_generator(old, shock_nr, ext):
     '''Generates a name to save the top file every cycle'''
     no_ext = old.split('.')[0]
-    new_top_name = no_ext + '_' + 's' + str(shock_nr) + '.top'
+    new_name = no_ext + '_' + 's' + str(shock_nr) + ext
 
-    return new_top_name
-
-# %%
-
-def gro_name_generator(old, shock_nr):
-    '''Generates a name to save the gro file every cycle'''
-    no_ext = old.split('.')[0]
-    new_gro_name = no_ext + '_' + 's' + str(shock_nr) + '.gro'
-    
-    return new_gro_name
-
-# %%
-
-def xtc_name_generator(old, shock_nr):
-    '''Generates a name to save the xtc file every cycle'''
-    no_ext = old.split('.')[0]
-    new_xtc_name = no_ext + '_' + 's' + str(shock_nr) + '.xtc'
-    
-    return new_xtc_name 
-
-# %%
-
-def tpr_name_generator(old, shock_nr):
-    '''Generates a name to save the tpr file every cycle'''
-    no_ext = old.split('.')[0]
-    new_tpr_name = no_ext + '_' + 's' + str(shock_nr) + '.tpr'
-    
-    return new_tpr_name 
+    return new_name
 
 # %%
 
@@ -282,7 +286,7 @@ def extension_remover(filename):
 # %%
     
 def l_particle_selector(lipidlist):
-    
+    '''selects the lipid particles targeted for creating the lipid bins according to the lipid names'''
     lipids = lipidlist
     tail_particles = []
     
@@ -326,12 +330,160 @@ def l_particle_selector(lipidlist):
 
 # %%
 
+def center_of_geometry(points):
+    '''calculates the center of geometry'''
+    nr = len(points)
+    x = 0
+    y = 0
+    z = 0
+    
+    for i in points:
+        x = x + i[0]
+        y = y + i[1]
+        z = z + i[2]
+    
+    com = np.array([x/nr, y/nr, z/nr])
+    
+    return com
+
+# %%
+
+def boundary_corrector(lips, box_dimensions):
+    '''Correction method for structures passing the periodic boundary'''
+    l = MDAnalysis.analysis.leaflet.LeafletFinder(lips, 'name GL1')
+    
+    group_len = []
+    for i in range(len(l.groups())):
+        group_len.append(len(l.group(i)))
+    list.sort(group_len)
+    
+    base_index = []
+    for i in range(len(l.groups())):
+        if len(l.group(i)) >= group_len[-2]:
+            base_index.append(i)
+    base = l.group(base_index[0]) + l.group(base_index[1])
+    
+    for i in l.groups():
+        if len(i) < group_len[-2]:
+            
+            cluster = i.positions
+            
+            com = center_of_geometry(cluster)
+            
+            absvalues = list(abs(box_dimensions[:3] - com)) + list(abs([0,0,0] - com))
+            
+            minimum = np.min(absvalues)
+            
+            min_index = list(absvalues).index(minimum)
+    
+            if min_index == 0:
+                for v in cluster:
+                    v[0] = v[0] - box_dimensions[0]
+    
+            if min_index == 1:
+                for v in cluster:
+                    v[1] = v[1] - box_dimensions[1]
+    
+            if min_index == 2:
+                for v in cluster:
+                    v[2] = v[2] - box_dimensions[2]
+    
+            if min_index == 3:
+                for v in cluster:
+                    v[0] = v[0] + box_dimensions[0]
+    
+            if min_index == 4:
+                for v in cluster:
+                    v[1] = v[1] + box_dimensions[1]
+    
+            if min_index == 5:
+                for v in cluster:
+                    v[2] = v[2] + box_dimensions[2]  
+
+            i.positions = cluster
+            
+            base = base + i
+    return base
+
+# %%
+
+def mesh_maker(cloud):
+    '''Generates a triangulated mesh based on a pointcloud'''
+    points = pv.wrap(cloud)
+    surf = points.reconstruct_surface(nbr_sz=6)
+    
+    return surf
+
+# %%
+
+def volume_area(leafl, pointc, boxdim):
+    '''Calculates the area of both leaflets and the volume of the vesicle'''
+    leaflets = leafl
+    pointcloud = pointc
+    outer = leaflets.groups(0).positions
+    inner = leaflets.groups(1).positions
+    
+    if len(leaflets.groups()) > 2:
+                    
+        pointcloud = boundary_corrector(pointcloud, boxdim)
+        leaflets = MDAnalysis.analysis.leaflet.LeafletFinder(pointcloud, 'name GL1')
+        outer = leaflets.groups(0).positions
+        inner = leaflets.groups(1).positions
+        
+    result = None
+    while result is None:
+        try:
+            outer_mesh = mesh_maker(outer)
+            outer_area = outer_mesh.area
+            inner_mesh = mesh_maker(inner)
+            inner_area = inner_mesh.area
+            
+            volume = inner_mesh.volume
+            result = volume
+        except RuntimeError:
+            pass
+                    
+    return inner_area, outer_area, volume
+
+# %%
+
+def xtc_maker(lipids, cycle):
+    '''Generates an xtc file from a gro file in order to concatenate the cycles'''
+    new_gro_name = 'only_lipids_temp.gro'
+    
+    lipids.write(new_gro_name)
+    
+    if len(str(cycle)) == 1:
+        new_name = 'vesicle_sA' + str(cycle) + '_t.xtc'
+    elif len(str(cycle)) == 2:
+        new_name = 'vesicle_sB' + str(cycle) + '_t.xtc'
+    else:
+        new_name = 'vesicle_sC' + str(cycle) + '_t.xtc'
+    
+    convcommand = 'gmx trjconv -f ' + new_gro_name + ' -o ' + new_name  
+    subprocess.call(convcommand, shell=True)
+    
+    rmcommand = 'rm ' + new_gro_name
+    subprocess.call(rmcommand, shell=True)
+    
+    return new_name
+
+# %%
+
 def main():
     nr_removed_atoms = args.removed
     
+    # changing the number of iterations per cycle and frequency of position data storage (default is 100.000 iterations)
+    mdp_value_changer(args.input, args.iterations, 'nsteps')
+    mdp_value_changer(args.input, args.xtc, 'nstxout-compressed')
+    
+    input_file = args.input
+    subprocess.call('mkdir shockfiles', shell=True)
+    
+    #changing the nstxout value (default is 100.000)
+    
     for shock in range(args.start, args.end):
         
-        input_file = args.input
         gro_file = args.coordinates
         tpr_file = extension_remover(gro_file) + '.tpr'
         gro_file_2 = extension_remover(gro_file) + '2.gro'
@@ -340,16 +492,44 @@ def main():
         topology_file_2 = extension_remover(topology_file) + '2.top'
         water_name = args.water
         
-        # Executing the actual simulation     
-        grompp_command = 'gmx grompp -f ' + input_file + ' -c ' + gro_file  + ' -p ' + topology_file + ' -o ' + tpr_file
-        mdrun_command = 'gmx mdrun -s ' + tpr_file + ' -v -x ' + xtc_file + ' -c ' + gro_file_2
-        subprocess.call(grompp_command, shell=True)
-        subprocess.call(mdrun_command, shell=True)
+        # Energy minimization
+        if args.enermin == 'yes':
+            
+            for i in range(args.enernr):
+                grompp_command_em = 'gmx grompp -f min.mdp -c ' + gro_file  + ' -p ' + topology_file + ' -maxwarn 1'
+                mdrun_command_em = 'gmx mdrun -v'
+                em_name_change_command = 'mv confout.gro' + ' ' + gro_file
+                tpr_remove_command = 'rm topol.tpr'
+                
+                subprocess.call(grompp_command_em, shell=True)
+                subprocess.call(mdrun_command_em, shell=True)
+                subprocess.call(em_name_change_command, shell=True)
+                subprocess.call(tpr_remove_command, shell=True)
+                    
+        # Executing the actual simulation 
+        restart_condition = 1
         
+        while restart_condition > 0:
+            
+            grompp_command = 'gmx grompp -f ' + input_file + ' -c ' + gro_file  + ' -p ' + topology_file + ' -o ' + tpr_file
+            mdrun_command = 'gmx mdrun -s ' + tpr_file + ' -v -x ' + xtc_file + ' -c ' + gro_file_2
+            subprocess.call(grompp_command, shell=True)
+            subprocess.call(mdrun_command, shell=True)
+            
+            # Checking if step files are generated, indicating system failure due to lincs warnings
+            file_list = os.listdir()
+            step_files = [fn for fn in file_list if 'step' in fn]
+            nr_step_files = len(step_files)
+            restart_condition = nr_step_files
+            if restart_condition > 0:
+                subprocess.call('rm *step*', shell=True)
+       
         # The old .gro file is saved under a new (unique) name
-        gro_name = gro_name_generator(gro_file, shock)
+        gro_name = name_generator(gro_file, shock, '.gro')
         g_name_change_command = 'mv ' + gro_file + ' ' + gro_name
         subprocess.call(g_name_change_command, shell=True)
+        dir_change = 'mv ' + gro_name + ' shockfiles'
+        subprocess.call(dir_change, shell=True)
         
         # Variables needed for the calculations
         u = mda.Universe(gro_file_2)
@@ -369,6 +549,7 @@ def main():
         nr_water_atoms = len(water_atoms)
         no_water = nr_atoms - nr_water_atoms
         bin_multiplier = (100-args.bins)/1000
+        only_lipids = u.select_atoms('not resname W')
         nr_bins = [int(box_dimensions[0]*bin_multiplier),int(box_dimensions[1]*bin_multiplier),int(box_dimensions[2]*bin_multiplier)]
         
         # Identifying the indices of the water particles inside we want to remove
@@ -383,9 +564,11 @@ def main():
         water_remover_top(topology_file, topology_file_2, nr_removed_atoms)
         
         # The old topology file is saved under a new (unique) name
-        top_name = top_name_generator(topology_file, shock)
+        top_name = name_generator(topology_file, shock, '.top')
         t_name_change_command = 'mv ' + topology_file + ' ' + top_name
         subprocess.call(t_name_change_command, shell=True)
+        dir_change = 'mv ' + top_name + ' shockfiles'
+        subprocess.call(dir_change, shell=True)
         
         # The new topology file is renamed to be used in the next cycle
         rename_command = 'mv ' + topology_file_2 + ' ' + topology_file
@@ -394,22 +577,54 @@ def main():
         # Removing log file
         subprocess.call('rm md.log', shell=True)
         
-        # Saving or removing .xtc file
-        if args.xtc == 'save':
-            xtc_name = xtc_name_generator(xtc_file, shock)
-            x_name_change_command = 'mv ' + xtc_file + ' ' + xtc_name
-            subprocess.call(x_name_change_command, shell=True)
-        else:
-            remove_xtc_command = 'rm ' + xtc_file
-            subprocess.call(remove_xtc_command, shell=True)
-            
+        # making and saving an .xtc file
+        xtc_file = xtc_maker(only_lipids, shock)
+        dir_change = 'mv ' + xtc_file + ' shockfiles'
+        subprocess.call(dir_change, shell=True)
+        
+        # Save one gro file of the vesicle only
+        if shock == 0:
+            keep_atoms = u.select_atoms('not resname W')
+            keep_atoms.write('vesicle_lipids.gro')
+            subprocess.call('mv vesicle_lipids.gro shockfiles', shell=True)
+                    
         # Saving the .tpr file
-        tpr_name = tpr_name_generator(tpr_file, shock)
+        tpr_name = name_generator(tpr_file, shock, '.tpr')
         tpr_name_change_command = 'mv ' + tpr_file + ' ' + tpr_name
         subprocess.call(tpr_name_change_command, shell=True)
+        dir_change = 'mv ' + tpr_name + ' shockfiles'
+        subprocess.call(dir_change, shell=True)
         
         # Removing all other backups
         subprocess.call('rm *#', shell=True)
         
+        # Calculating the volume and surface area and writing to file
+        if args.vesdata == 'yes':
+            selection = 'name ' + args.cloudpoints
+            leaflets = MDAnalysis.analysis.leaflet.LeafletFinder(u, selection)
+            pointcloud = u.select_atoms(selection).positions
+            vol_area = volume_area(leaflets, pointcloud, box_dimensions)
+            
+            with open('vesicle_data.txt', 'a') as data:
+                
+                data.write(str(shock))
+                data.write(' ')
+                data.write(str(vol_area[0]))
+                data.write(' ')
+                data.write(str(vol_area[1]))
+                data.write(' ')
+                data.write(str(vol_area[2]))
+                data.write('\n')
+    
+    # Concatenating the xtc files
+    concatcommand = 'gmx trjcat -cat -f shockfiles/*.xtc -o shockfiles/vesicle_lipids.xtc'
+    subprocess.call(concatcommand, shell=True)
+    subprocess.call('rm shockfiles/*t.xtc', shell=True)
+    
 if __name__ == '__main__':
     main()
+    
+    
+    
+    
+    
