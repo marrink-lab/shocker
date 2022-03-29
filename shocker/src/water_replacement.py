@@ -63,9 +63,9 @@ class Mover():
         placement_pos = []
         for i in bins:
             
-            randx = random.uniform((i[0]*self.bin_size)-1, i[0]*self.bin_size)
-            randy = random.uniform((i[1]*self.bin_size)-1, i[1]*self.bin_size)
-            randz = random.uniform((i[2]*self.bin_size)-1, i[2]*self.bin_size)
+            randx = random.uniform((i[0]-1)*self.bin_size, i[0]*self.bin_size)
+            randy = random.uniform((i[1]-1)*self.bin_size, i[1]*self.bin_size)
+            randz = random.uniform((i[2]-1)*self.bin_size, i[2]*self.bin_size)
             placement_pos.append([randx,randy,randz])
             
         return placement_pos
