@@ -65,7 +65,7 @@ def main():
         xtc_file = args.name + '.xtc'
         topology_file = args.topology + '.top'
         topology_file_2 = args.topology + '2.top'
-        water_name = args.water
+        #water_name = args.water
         
         # Energy minimization if needed
         if args.enermin == 'yes':
@@ -112,10 +112,8 @@ def main():
         
         u = mda.Universe(gro_file_2)
         all_atoms = u.select_atoms('all')
-        water_atoms = u.select_atoms(water_name)
-        water_pos = water_atoms.positions
+        all_atoms_pos = all_atoms.positions
         lipids = u.select_atoms('not resname W')
-        nr_lipid_atoms = len(lipids)
         tj = u.trajectory[0]
         box_dimensions = tj.dimensions
         bin_size_a = args.bins*10
@@ -130,7 +128,7 @@ def main():
         bin_system = cluster_box.bin_system_maker(lipid_bins_single)
         bin_clusters = cluster_box.cluster_finder(bin_system)
         
-        # using class Remover the correct cluster is identified and the indices
+        # using class Identifier the correct cluster is identified and the indices
         # of the particles to be removed are obtained
         identify = Identifier(bin_clusters, box_dimensions, bin_size_a, args.removed)
         
@@ -138,13 +136,12 @@ def main():
         inner_cluster = water_clusters[0]
         outer_cluster = water_clusters[1]
         np.random.shuffle(inner_cluster)
-        all_water_bins = identify.bin_converter_w(water_pos)
+        all_bins = identify.bin_converter_w(all_atoms_pos)
         if args.shocktype == 'hypertonic':
-            remove_water = identify.index_finder(all_water_bins, inner_cluster)
-            remove_water_global = wi.local_to_global(nr_lipid_atoms, remove_water)
+            remove_water = identify.index_finder_m(all_bins, inner_cluster)
         else:
-            remove_water = identify.index_finder(all_water_bins, outer_cluster)
-            remove_water_global = wi.local_to_global(nr_lipid_atoms, remove_water)
+            remove_water = identify.index_finder_m(all_bins, outer_cluster)
+            
         
         # =====================================================================
         # Modifying input files to create the new situation
@@ -154,21 +151,21 @@ def main():
             if args.replace == 'no':
                 file_collection = Remover(topology_file, all_atoms, args.removed)
             
-                file_collection.water_remover_gro(remove_water_global, gro_file)
+                file_collection.water_remover_gro(remove_water, gro_file)
                 file_collection.water_remover_top(topology_file_2)
                 
             else:
-                file_collection = Mover(outer_cluster, all_atoms, bin_size_a, args.removed)
+                file_collection = Mover(outer_cluster, all_atoms, bin_size_a, args.removed, box_dimensions)
                 
                 replacement_bins = file_collection.replacement_bin_identifier()
-                new_positions = file_collection.position_generator(replacement_bins)
-                file_collection.water_replacement_gro(remove_water_global, new_positions, gro_file)
+                new_positions = file_collection.position_generator(replacement_bins, all_bins)
+                file_collection.water_replacement_gro(remove_water, new_positions, gro_file)
         else:
-            file_collection = Mover(inner_cluster, all_atoms)
+            file_collection = Mover(inner_cluster, all_atoms, bin_size_a, args.removed, box_dimensions)
             
-            replacement_bins = file_collection.replacement_bin_identifier(args.removed)
-            new_positions = wrep.position_generator(replacement_bins, bin_size_a)
-            file_collection.water_replacement_gro(remove_water_global, new_positions, gro_file)
+            replacement_bins = file_collection.replacement_bin_identifier()
+            new_positions = file_collection.position_generator(replacement_bins, all_bins)
+            file_collection.water_replacement_gro(remove_water, new_positions, gro_file)
         
         # =====================================================================
         # Renaming, saving and deleting files

@@ -7,29 +7,6 @@ Created on Tue Mar  8 14:52:13 2022
 """
 import numpy as np
 
-def local_to_global(no_water, local_index):
-    """
-    Local indices of the water particles that have to be removed are converted
-    to global indices of the all atoms list.
-
-    Parameters:
-    -----------
-    no_water: integer
-        the number of particles other than water
-    local_index: array
-        the local indices of water particles to be removed from
-        the vesicle
-
-    Returns:
-    --------
-    array, the global indices of water particles to be removed from the vesicle
-    """
-    global_index = []
-    for i in local_index:
-        global_index.append(i + no_water)
-
-    return global_index
-
 class Identifier():
     """
     Selecting water particles to be removed or replaced. these particles are
@@ -91,10 +68,9 @@ class Identifier():
         array (x,3) containing the positions of the bins containing the particles in
         'target_atoms'
         """
-               
-        x_pos = np.ceil(target_atoms[:, 0]/(self.box_dim[0]/self.nr_bins[0]))
-        y_pos = np.ceil(target_atoms[:, 1]/(self.box_dim[1]/self.nr_bins[1]))
-        z_pos = np.ceil(target_atoms[:, 2]/(self.box_dim[2]/self.nr_bins[2]))
+        x_pos = np.floor(target_atoms[:, 0]/self.bin_size)
+        y_pos = np.floor(target_atoms[:, 1]/self.bin_size)
+        z_pos = np.floor(target_atoms[:, 2]/self.bin_size)
     
         binsfloat = np.stack((x_pos, y_pos, z_pos), axis=-1)
         bins = np.int_(binsfloat)
@@ -107,7 +83,7 @@ class Identifier():
                     i[pos] = self.nr_bins[pos] + i[pos]
         return bins
     
-    def index_finder(self, w_all, w_cluster):
+    def index_finder_m(self, w_all, w_cluster):
         """
         Finds the indices of the clustered water bins 'w_cluster' in the complete
         list of water bins 'w_all'. The search continues until the desired number

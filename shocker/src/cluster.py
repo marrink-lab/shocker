@@ -140,9 +140,9 @@ class Cluster():
         array (x,3) containing the positions of the bins containing the particles in
         'target_lipids'
         """
-        x_pos = np.ceil(target_lipids[:, 0]/(self.box_dim[0]/self.nr_bins[0]))
-        y_pos = np.ceil(target_lipids[:, 1]/(self.box_dim[1]/self.nr_bins[1]))
-        z_pos = np.ceil(target_lipids[:, 2]/(self.box_dim[2]/self.nr_bins[2]))
+        x_pos = np.floor(target_lipids[:, 0]/(self.box_dim[0]/self.nr_bins[0]))
+        y_pos = np.floor(target_lipids[:, 1]/(self.box_dim[1]/self.nr_bins[1]))
+        z_pos = np.floor(target_lipids[:, 2]/(self.box_dim[2]/self.nr_bins[2]))
     
         binsfloat = np.stack((x_pos, y_pos, z_pos), axis=-1)
         bins = np.int_(binsfloat)
@@ -173,7 +173,7 @@ class Cluster():
         bsystem = np.zeros((self.nr_bins[0], self.nr_bins[1], self.nr_bins[2]))
     
         for i in l_bins:
-            bsystem[i[0]-1][i[1]-1][i[2]-1] = 1
+            bsystem[i[0]][i[1]][i[2]] = 1
     
         return bsystem
 
