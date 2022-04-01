@@ -12,15 +12,15 @@ import argparse
 import MDAnalysis.analysis.leaflet
 import numpy as np
 import os
-import Shocker.shocker.src.cluster as cl
-import Shocker.shocker.src.file_mod as fm
-import Shocker.shocker.src.water_replacement as wrep
-import Shocker.shocker.src.water_identifier as wi
-from Shocker.shocker.src.cluster import Cluster
-from Shocker.shocker.src.water_identifier import Identifier
-from Shocker.shocker.src.water_remover import Remover
-from Shocker.shocker.src.water_replacement import Mover
-from Shocker.shocker.src.vesicle_data import VolArea
+import shocker.src.cluster as cl
+import shocker.src.file_mod as fm
+import shocker.src.water_replacement as wrep
+import shocker.src.water_identifier as wi
+from shocker.src.cluster import Cluster
+from shocker.src.water_identifier import Identifier
+from shocker.src.water_remover import Remover
+from shocker.src.water_replacement import Mover
+from shocker.src.vesicle_data import VolArea
 
 def main():
     
