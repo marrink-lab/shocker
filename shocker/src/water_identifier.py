@@ -7,6 +7,14 @@ Created on Tue Mar  8 14:52:13 2022
 """
 import numpy as np
 
+def local_to_global(no_water, localindex):
+    '''(local) indices found in the list of water particles are converted to global indices of the complete system list'''
+    global_index = []
+    for i in localindex:
+        global_index.append(i + no_water)
+        
+    return global_index
+
 class Identifier():
     """
     Selecting water particles to be removed or replaced. these particles are

@@ -12,15 +12,15 @@ import argparse
 import MDAnalysis.analysis.leaflet
 import numpy as np
 import os
-import Shocker.shocker.src.cluster as cl
-import Shocker.shocker.src.file_mod as fm
-import Shocker.shocker.src.water_replacement as wrep
-import Shocker.shocker.src.water_identifier as wi
-from Shocker.shocker.src.cluster import Cluster
-from Shocker.shocker.src.water_identifier import Identifier
-from Shocker.shocker.src.water_remover import Remover
-from Shocker.shocker.src.water_replacement import Mover
-from Shocker.shocker.src.vesicle_data import VolArea
+import shocker.src.cluster as cl
+import shocker.src.file_mod as fm
+import shocker.src.water_replacement as wrep
+import shocker.src.water_identifier as wi
+from shocker.src.cluster import Cluster
+from shocker.src.water_identifier import Identifier
+from shocker.src.water_remover import Remover
+from shocker.src.water_replacement import Mover
+from shocker.src.vesicle_data import VolArea
 
 def main():
     
@@ -113,7 +113,10 @@ def main():
         u = mda.Universe(gro_file_2)
         all_atoms = u.select_atoms('all')
         all_atoms_pos = all_atoms.positions
+        water = u.select_atoms('resname W')
+        water_pos = water.positions
         lipids = u.select_atoms('not resname W')
+        nr_lipids = len(lipids)
         tj = u.trajectory[0]
         box_dimensions = tj.dimensions
         bin_size_a = args.bins*10
@@ -136,12 +139,16 @@ def main():
         inner_cluster = water_clusters[0]
         outer_cluster = water_clusters[1]
         np.random.shuffle(inner_cluster)
+        water_bins = identify.bin_converter_w(water_pos)
         all_bins = identify.bin_converter_w(all_atoms_pos)
+        
         if args.shocktype == 'hypertonic':
-            remove_water = identify.index_finder_m(all_bins, inner_cluster)
+            remove_water_local = identify.index_finder_m(water_bins, inner_cluster)
+            remove_water = wi.local_to_global(nr_lipids, remove_water_local)
+            print(remove_water)
         else:
-            remove_water = identify.index_finder_m(all_bins, outer_cluster)
-            
+            remove_water_local = identify.index_finder_m(water_bins, outer_cluster)
+            remove_water = wi.local_to_global(nr_lipids, remove_water_local)
         
         # =====================================================================
         # Modifying input files to create the new situation
