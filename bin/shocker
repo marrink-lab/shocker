@@ -12,15 +12,15 @@ import argparse
 import MDAnalysis.analysis.leaflet
 import numpy as np
 import os
-import shocker.src.cluster as cl
-import shocker.src.file_mod as fm
-import shocker.src.water_replacement as wrep
-import shocker.src.water_identifier as wi
-from shocker.src.cluster import Cluster
-from shocker.src.water_identifier import Identifier
-from shocker.src.water_remover import Remover
-from shocker.src.water_replacement import Mover
-from shocker.src.vesicle_data import VolArea
+import Shocker.shocker.src.cluster as cl
+import Shocker.shocker.src.file_mod as fm
+import Shocker.shocker.src.water_replacement as wrep
+import Shocker.shocker.src.water_identifier as wi
+from Shocker.shocker.src.cluster import Cluster
+from Shocker.shocker.src.water_identifier import Identifier
+from Shocker.shocker.src.water_remover import Remover
+from Shocker.shocker.src.water_replacement import Mover
+from Shocker.shocker.src.vesicle_data import VolArea
 
 def main():
     
@@ -89,7 +89,7 @@ def main():
         while restart_condition > 0:
             
             grompp_command = 'gmx grompp -f ' + args.input + ' -c ' + \
-                gro_file  + ' -p ' + topology_file + ' -o ' + tpr_file
+                gro_file  + ' -p ' + topology_file + ' -o ' + tpr_file + ' -maxwarn 1'
             mdrun_command = 'gmx mdrun -s ' + tpr_file + \
                 ' -v -x ' + xtc_file + ' -c ' + gro_file_2
             subprocess.call(grompp_command, shell=True)
