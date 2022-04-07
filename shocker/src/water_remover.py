@@ -21,13 +21,14 @@ class Remover():
         number of removed particles
     """
     
-    def __init__(self, top_old, all_atoms, nr_removed):
+    def __init__(self, top_old, all_atoms, nr_removed, gro_file):
         
         self.top_old = top_old
         self.all_atoms = all_atoms
         self.nr_removed = nr_removed
+        self.gro_file = gro_file
 
-    def water_remover_gro(self, indices, gro_file):
+    def water_remover_gro(self, indices):
         """
         A string is created of particle indices that have to be removed from the
         system, according to which the new gro file is constructed.
@@ -48,7 +49,7 @@ class Remover():
             nstring = nstring + str(i) + ' '
     
         keep_atoms = self.all_atoms.select_atoms(nstring)
-        keep_atoms.write(gro_file)
+        keep_atoms.write(self.gro_file)
     
     def water_remover_top(self, new):
         """

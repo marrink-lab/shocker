@@ -63,21 +63,33 @@ class Mover():
         self.nr_bins = [int(x/self.bin_size) for x in self.box_dim]
         self.nr_removed = nr_removed
 
-    def replacement_bin_identifier(self):
+    def replacement_bin_identifier(self, all_bins):
         """
         Randomly select bins to replace water particles
         """
         cluster_length = len(self.outer_cluster)
 
-        chosen_bins_nr = []
-        for i in range(self.nr_removed):
-            random_nr = random.randint(0, cluster_length-1)
-            chosen_bins_nr.append(random_nr)
-
         chosen_bins = []
-        for i in chosen_bins_nr:
-            chosen_bins.append(self.outer_cluster[i])
-
+        rand_nr_storage = []
+        
+        while len(chosen_bins) < self.nr_removed:
+            random_nr = random.randint(0, cluster_length-1)
+            
+            if random_nr not in rand_nr_storage:
+                
+                rand_nr_storage.append(random_nr)
+                chosen_bin = self.outer_cluster[random_nr]
+                
+                not_w_count = 0
+                indices = index_finder(all_bins, chosen_bin)
+                for i in indices:
+                    istring = 'index ' + str(i)
+                    if self.all_atoms.select_atoms(istring).types[0] != 'W':
+                        not_w_count = not_w_count + 1
+    
+                if not_w_count == 0:
+                    chosen_bins.append(chosen_bin)
+        
         return chosen_bins
 
     def position_generator(self, chosen_bins, all_bins):
@@ -123,8 +135,7 @@ class Mover():
                     cur_min = min(distance)
                     best_pos = temp_pos
                 c = c + 1
-            print(cur_min)
-
+                        
             placement_pos.append(best_pos)
 
         return placement_pos

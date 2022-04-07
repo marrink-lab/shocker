@@ -43,12 +43,14 @@ def main():
     parser.add_argument('-cp', '--cloudpoints', default='GL1', help='defines which atoms are used to construct a triangulated surface of the vesicle')
     parser.add_argument('-rp', '--replace', default='no', help='whether or not the waterparticles are replaced or removed')
     parser.add_argument('-shock', '--shocktype', default='hypertonic', help='type of osmotick shock (hypertonic or hypotonic)')
+    parser.add_argument('-version', '--gromacs', default='gmx', help='version of the gromacs suite used to perform simulation')
     args = parser.parse_args()
     
     # changing the number of iterations per cycle and frequency of position data 
     # storage (default is 100.000 iterations) if needed
-    fm.mdp_value_changer(args.input, 'nsteps', args.iterations)
-    fm.mdp_value_changer(args.input, 'nstxout-compressed', args.xtc)
+    mdp_file = args.input + '.mdp'
+    fm.mdp_value_changer(mdp_file, 'nsteps', args.iterations)
+    fm.mdp_value_changer(mdp_file, 'nstxout-compressed', args.xtc)
     
     # creating a destination folder to store all generated files
     subprocess.call('mkdir shockfiles', shell=True)
@@ -72,10 +74,11 @@ def main():
             for i in range(args.enernr):
                 for mdp in args.emruns:
                     
-                    grompp_command_em = 'gmx grompp -f ' + mdp + '.mdp' + ' -c ' + gro_file + \
-                        ' -p ' + topology_file + ' -maxwarn 1'
-                    mdrun_command_em = 'gmx mdrun -v'
-                    em_name_change_command = 'mv confout.gro' + ' ' + gro_file
+                    grompp_em = '{} grompp -f {} -c {} -p {} -maxwarn 1'
+                    grompp_command_em = grompp_em.format(args.gromacs, mdp, gro_file, topology_file)
+                    
+                    mdrun_command_em = '{} mdrun -v'.format(args.gromacs)
+                    em_name_change_command = 'mv confout.gro {}'.format(gro_file)
                     tpr_remove_command = 'rm topol.tpr'
                     
                     subprocess.call(grompp_command_em, shell=True)
@@ -88,10 +91,11 @@ def main():
         
         while restart_condition > 0:
             
-            grompp_command = 'gmx grompp -f ' + args.input + ' -c ' + \
-                gro_file  + ' -p ' + topology_file + ' -o ' + tpr_file + ' -maxwarn 1'
-            mdrun_command = 'gmx mdrun -s ' + tpr_file + \
-                ' -v -x ' + xtc_file + ' -c ' + gro_file_2
+            grompp = '{} grompp -f {} -c {} -p {} -o {}'
+            grompp_command = grompp.format(args.gromacs, mdp_file, gro_file, topology_file, tpr_file)
+            
+            mdrun = '{} mdrun -s {} -v -x {} -c {}'
+            mdrun_command = mdrun.format(args.gromacs, tpr_file, xtc_file, gro_file_2)
             subprocess.call(grompp_command, shell=True)
             subprocess.call(mdrun_command, shell=True)
             
@@ -145,33 +149,35 @@ def main():
         if args.shocktype == 'hypertonic':
             remove_water_local = identify.index_finder_m(water_bins, inner_cluster)
             remove_water = wi.local_to_global(nr_lipids, remove_water_local)
-            print(remove_water)
+           
         else:
             remove_water_local = identify.index_finder_m(water_bins, outer_cluster)
             remove_water = wi.local_to_global(nr_lipids, remove_water_local)
-        
+            
         # =====================================================================
         # Modifying input files to create the new situation
         # =====================================================================
         if args.shocktype == 'hypertonic':
             
             if args.replace == 'no':
-                file_collection = Remover(topology_file, all_atoms, args.removed)
+                file_collection = Remover(topology_file, all_atoms, args.removed, gro_file)
             
-                file_collection.water_remover_gro(remove_water, gro_file)
+                file_collection.water_remover_gro(remove_water)
                 file_collection.water_remover_top(topology_file_2)
                 
             else:
                 file_collection = Mover(outer_cluster, all_atoms, bin_size_a, args.removed, box_dimensions)
                 
-                replacement_bins = file_collection.replacement_bin_identifier()
+                replacement_bins = file_collection.replacement_bin_identifier(all_bins)
                 new_positions = file_collection.position_generator(replacement_bins, all_bins)
+                
                 file_collection.water_replacement_gro(remove_water, new_positions, gro_file)
         else:
             file_collection = Mover(inner_cluster, all_atoms, bin_size_a, args.removed, box_dimensions)
             
-            replacement_bins = file_collection.replacement_bin_identifier()
+            replacement_bins = file_collection.replacement_bin_identifier(all_bins)
             new_positions = file_collection.position_generator(replacement_bins, all_bins)
+
             file_collection.water_replacement_gro(remove_water, new_positions, gro_file)
         
         # =====================================================================

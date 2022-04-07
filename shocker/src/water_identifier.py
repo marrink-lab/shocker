@@ -6,6 +6,7 @@ Created on Tue Mar  8 14:52:13 2022
 @author: marco
 """
 import numpy as np
+import random
 
 def local_to_global(no_water, localindex):
     '''(local) indices found in the list of water particles are converted to global indices of the complete system list'''
@@ -112,14 +113,16 @@ class Identifier():
         vesicle interior according to the total water list
         """
         indices = []
-        i = 0
+        
         while len(indices) < self.nr_remove:
+
+            i = random.randint(0, len(w_cluster)-1)
             bin_index = np.where((w_all[:, 0] == w_cluster[i][0])\
                                  & (w_all[:, 1] == w_cluster[i][1])\
                                      & (w_all[:, 2] == w_cluster[i][2]))[0]
             for index in bin_index:
                 indices.append(int(index))
-            i = i + 1
+            #i = i + 1
     
         return indices[:self.nr_remove]
     
