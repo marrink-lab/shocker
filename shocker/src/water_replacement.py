@@ -46,8 +46,8 @@ class Mover():
 
     Parameters:
     -----------
-    outer_cluster: array
-        locations of the bins of the outer water cluster
+    receiving_cluster: array
+        locations of the bins of the cluster water particles are moved into
     all_atoms: MDAnalysis atomgroup
         atomgroup of all the particles in the system
     bin_size: int
@@ -55,19 +55,30 @@ class Mover():
     nr_removed: int
         number of removed particles
     """
-    def __init__(self, outer_cluster, all_atoms, bin_size, nr_removed, box_dim):
-        self.outer_cluster = outer_cluster
+    def __init__(self, receiving_cluster, all_atoms, bin_size, nr_removed, box_dim, all_bins):
+        self.receiving_cluster = receiving_cluster
         self.all_atoms = all_atoms
         self.bin_size = bin_size
         self.box_dim = box_dim
         self.nr_bins = [int(x/self.bin_size) for x in self.box_dim]
         self.nr_removed = nr_removed
+        self.all_bins = all_bins
 
-    def replacement_bin_identifier(self, all_bins):
+    def replacement_bin_identifier(self):
         """
-        Randomly select bins to replace water particles
+        Randomly select bins to replace water particles. each water particle ends
+        up in a unique bin that only contains water particles.
+        
+        Parameters:
+        -----------
+        all_bins: array
+            all particles in the system converted to bins
+            
+        Returns:
+        --------
+        array containing the bins water particles are moved to
         """
-        cluster_length = len(self.outer_cluster)
+        cluster_length = len(self.receiving_cluster)
 
         chosen_bins = []
         rand_nr_storage = []
@@ -78,10 +89,10 @@ class Mover():
             if random_nr not in rand_nr_storage:
                 
                 rand_nr_storage.append(random_nr)
-                chosen_bin = self.outer_cluster[random_nr]
+                chosen_bin = self.receiving_cluster[random_nr]
                 
                 not_w_count = 0
-                indices = index_finder(all_bins, chosen_bin)
+                indices = index_finder(self.all_bins, chosen_bin)
                 for i in indices:
                     istring = 'index ' + str(i)
                     if self.all_atoms.select_atoms(istring).types[0] != 'W':
@@ -92,7 +103,7 @@ class Mover():
         
         return chosen_bins
 
-    def position_generator(self, chosen_bins, all_bins):
+    def position_generator(self, chosen_bins):
         """
         in each bin in "chosen_bins" the 'best' position for a particle is found
         by randomly picking a position and calculating the shortest distance between
@@ -113,7 +124,7 @@ class Mover():
         placement_pos = []
         for b in chosen_bins:
 
-            indices = index_finder(all_bins, b)
+            indices = index_finder(self.all_bins, b)
             istring = 'index '
             for i in indices:
                 istring = istring + str(i) + ' '

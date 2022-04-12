@@ -132,6 +132,7 @@ def main():
         target_lipids_pos = target_lipids.positions
         lipid_bins = cluster_box.bin_converter_l(target_lipids_pos)
         lipid_bins_single = cl.multiples_remover(lipid_bins)
+
         bin_system = cluster_box.bin_system_maker(lipid_bins_single)
         bin_clusters = cluster_box.cluster_finder(bin_system)
         
@@ -166,17 +167,17 @@ def main():
                 file_collection.water_remover_top(topology_file_2)
                 
             else:
-                file_collection = Mover(outer_cluster, all_atoms, bin_size_a, args.removed, box_dimensions)
+                file_collection = Mover(outer_cluster, all_atoms, bin_size_a, args.removed, box_dimensions, all_bins)
                 
-                replacement_bins = file_collection.replacement_bin_identifier(all_bins)
-                new_positions = file_collection.position_generator(replacement_bins, all_bins)
+                replacement_bins = file_collection.replacement_bin_identifier()
+                new_positions = file_collection.position_generator(replacement_bins)
                 
                 file_collection.water_replacement_gro(remove_water, new_positions, gro_file)
         else:
-            file_collection = Mover(inner_cluster, all_atoms, bin_size_a, args.removed, box_dimensions)
+            file_collection = Mover(inner_cluster, all_atoms, bin_size_a, args.removed, box_dimensions, all_bins)
             
-            replacement_bins = file_collection.replacement_bin_identifier(all_bins)
-            new_positions = file_collection.position_generator(replacement_bins, all_bins)
+            replacement_bins = file_collection.replacement_bin_identifier()
+            new_positions = file_collection.position_generator(replacement_bins)
 
             file_collection.water_replacement_gro(remove_water, new_positions, gro_file)
         

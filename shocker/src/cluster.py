@@ -173,7 +173,8 @@ class Cluster():
         bsystem = np.zeros((self.nr_bins[0], self.nr_bins[1], self.nr_bins[2]))
     
         for i in l_bins:
-            bsystem[i[0]][i[1]][i[2]] = 1
+            if i[0] <= self.nr_bins[0]-1 and i[1] <= self.nr_bins[1]-1 and i[2] <= self.nr_bins[2]-1:
+                bsystem[i[0]][i[1]][i[2]] = 1
     
         return bsystem
 
