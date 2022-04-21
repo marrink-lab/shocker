@@ -7,9 +7,9 @@ Created on Tue Mar  8 18:02:38 2022
 """
 import subprocess
 
-def name_generator(old, shock_nr):
+def name_generator(old, shock_nr, test='no'):
     """
-    Generates a unique name for .gro,.top and .tpr files according to the cycle
+    Generates a unique name for .gro, .top and .tpr files according to the cycle
     number (shock_nr).
 
     Parameters:
@@ -26,13 +26,16 @@ def name_generator(old, shock_nr):
     no_ext = old.split('.')[0]
     ext = old.split('.')[1]
     new_name = no_ext + '_' + 's' + str(shock_nr) + '.' + ext
-
-    name_change_command = 'mv ' + old + ' ' + new_name
-    subprocess.call(name_change_command, shell=True)
-    dir_change = 'mv ' + new_name + ' shockfiles'
-    subprocess.call(dir_change, shell=True)
     
-def mdp_value_changer(old, parameter, value):
+    if test == 'no':
+        name_change_command = 'mv ' + old + ' ' + new_name
+        subprocess.call(name_change_command, shell=True)
+        dir_change = 'mv ' + new_name + ' shockfiles'
+        subprocess.call(dir_change, shell=True)
+    else:
+        return new_name
+    
+def mdp_value_changer(old, new, parameter, value, test='no'):
     """
     Modifies a value in the mdp file by writing a new file and deleting the old
     one.
@@ -45,6 +48,8 @@ def mdp_value_changer(old, parameter, value):
         parameter name to be modified
     value: integer
         new parameter value
+    test: string
+        name change and file replacement not exectuted if a test is run
         
     Returns:
     --------
@@ -56,21 +61,23 @@ def mdp_value_changer(old, parameter, value):
             for i in range(nr_mdp_lines):
                 spl = lines_mdp[i].split(' ')
                 if spl[0] != parameter:
-                    with open('new.mdp', 'a') as new_mdp:
+                    with open(new, 'a') as new_mdp:
                         new_mdp.write(lines_mdp[i])
                 else:
                     spl[-1] = str(value) + '\n'
                     new_spl = ' '.join(spl)
-                    with open('new.mdp', 'a') as new_mdp:
+                    with open(new, 'a') as new_mdp:
                         new_mdp.write(new_spl)
-
-    mdp_remove_command = 'rm ' + old
-    mdp_name_change_command = 'mv ' + 'new.mdp ' + old                   
-
-    subprocess.call(mdp_remove_command, shell=True)                   
-    subprocess.call(mdp_name_change_command, shell=True)
     
-def xtc_maker(lipids, shock_nr):
+    if test == 'no':
+        
+        mdp_remove_command = 'rm ' + old
+        mdp_name_change_command = 'mv ' + new + ' ' + old                   
+    
+        subprocess.call(mdp_remove_command, shell=True)                   
+        subprocess.call(mdp_name_change_command, shell=True)
+    
+def xtc_maker(lipids, shock_nr, temp_gro_name, test='no'):
     """
     Generates xtc files from gro files each pumping cycle in order to be able
     to concatenate all files at the end of the process.
@@ -85,9 +92,8 @@ def xtc_maker(lipids, shock_nr):
     --------
     generates an xtc file
     """
-    new_gro_name = 'only_lipids_temp.gro'
-
-    lipids.write(new_gro_name)
+    
+    lipids.write(temp_gro_name)
 
     if len(str(shock_nr)) == 1:
         new_name = 'vesicle_sA' + str(shock_nr) + '_t.xtc'
@@ -96,11 +102,16 @@ def xtc_maker(lipids, shock_nr):
     else:
         new_name = 'vesicle_sC' + str(shock_nr) + '_t.xtc'
 
-    convcommand = 'gmx trjconv -f ' + new_gro_name + ' -o ' + new_name
-    subprocess.call(convcommand, shell=True)
-
-    rmcommand = 'rm ' + new_gro_name
-    subprocess.call(rmcommand, shell=True)
+    if test=='no':
+        
+        convcommand = 'gmx trjconv -f ' + temp_gro_name + ' -o ' + new_name
+        subprocess.call(convcommand, shell=True)
+    
+        rmcommand = 'rm ' + temp_gro_name
+        subprocess.call(rmcommand, shell=True)
+        
+    else:
+        return new_name
 
 
     

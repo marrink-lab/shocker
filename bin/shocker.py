@@ -44,13 +44,14 @@ def main():
     parser.add_argument('-rp', '--replace', default='no', help='whether or not the waterparticles are replaced or removed')
     parser.add_argument('-shock', '--shocktype', default='hypertonic', help='type of osmotick shock (hypertonic or hypotonic)')
     parser.add_argument('-version', '--gromacs', default='gmx', help='version of the gromacs suite used to perform simulation')
+    parser.add_argument('-lib', '--library', default='Martini3.LIB', help='lipid library file')
     args = parser.parse_args()
     
     # changing the number of iterations per cycle and frequency of position data 
     # storage (default is 100.000 iterations) if needed
     mdp_file = args.input + '.mdp'
-    fm.mdp_value_changer(mdp_file, 'nsteps', args.iterations)
-    fm.mdp_value_changer(mdp_file, 'nstxout-compressed', args.xtc)
+    fm.mdp_value_changer(mdp_file, 'new.mdp', 'nsteps', args.iterations)
+    fm.mdp_value_changer(mdp_file, 'new.mdp', 'nstxout-compressed', args.xtc)
     
     # creating a destination folder to store all generated files
     subprocess.call('mkdir shockfiles', shell=True)
@@ -109,7 +110,7 @@ def main():
        
         # The old .gro file is saved under a new (unique) name
         fm.name_generator(gro_file, shock)
-                
+                        
         # =====================================================================
         # Identifying water particles to remove or replace
         # =====================================================================
@@ -128,7 +129,7 @@ def main():
         # Cluster class used to convert the system in bins and find bin water clusters
         cluster_box = Cluster(lipids, box_dimensions, bin_size_a, args.lipids)
         
-        target_lipids = cluster_box.l_particle_selector()        
+        target_lipids = cluster_box.l_particle_selector(args.library)        
         target_lipids_pos = target_lipids.positions
         lipid_bins = cluster_box.bin_converter_l(target_lipids_pos)
         lipid_bins_single = cl.multiples_remover(lipid_bins)
@@ -177,7 +178,7 @@ def main():
             file_collection = Mover(inner_cluster, all_atoms, bin_size_a, args.removed, box_dimensions, all_bins)
             
             replacement_bins = file_collection.replacement_bin_identifier()
-            new_positions = file_collection.position_generator(replacement_bins)
+            new_positions = file_collection.position_generator(replacement_bins)[0]
 
             file_collection.water_replacement_gro(remove_water, new_positions, gro_file)
         
@@ -194,7 +195,7 @@ def main():
         fm.name_generator(tpr_file, shock)
                                
         # making and saving an .xtc file
-        fm.xtc_maker(lipids, shock)
+        fm.xtc_maker(lipids, shock, 'only_lipids_temp.gro')
         subprocess.call('mv *.xtc shockfiles', shell=True)
                 
         # Save one gro file of the vesicle only

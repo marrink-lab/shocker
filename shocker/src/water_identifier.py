@@ -109,7 +109,7 @@ class Identifier():
             
         Returns:
         --------
-        array (x, 3), indices of the water particles we want to remove from the
+        array, indices of the water particles we want to remove from the
         vesicle interior according to the total water list
         """
         indices = []

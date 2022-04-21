@@ -73,7 +73,7 @@ class Cluster():
         self.nr_bins = [int(x/self.bin_size) for x in self.box_dim]
         self.lipid_list = lipid_list
         
-    def l_particle_selector(self):
+    def l_particle_selector(self, library):
         """
         Of each lipid in 'lipidlist' the last three tail particles are selected
         according to the Martini3 library file.
@@ -86,7 +86,7 @@ class Cluster():
 
         for lipid in self.lipid_list:
 
-            with open('Martini3.LIB', 'r') as lipfile:
+            with open(library, 'r') as lipfile:
                 lines = lipfile.readlines()
                 for i, _ in enumerate(lines):
                     name = lines[i].strip()[1:-1]
@@ -140,9 +140,9 @@ class Cluster():
         array (x,3) containing the positions of the bins containing the particles in
         'target_lipids'
         """
-        x_pos = np.floor(target_lipids[:, 0]/(self.box_dim[0]/self.nr_bins[0]))
-        y_pos = np.floor(target_lipids[:, 1]/(self.box_dim[1]/self.nr_bins[1]))
-        z_pos = np.floor(target_lipids[:, 2]/(self.box_dim[2]/self.nr_bins[2]))
+        x_pos = np.floor(target_lipids[:, 0]/(self.bin_size))
+        y_pos = np.floor(target_lipids[:, 1]/(self.bin_size))
+        z_pos = np.floor(target_lipids[:, 2]/(self.bin_size))
     
         binsfloat = np.stack((x_pos, y_pos, z_pos), axis=-1)
         bins = np.int_(binsfloat)

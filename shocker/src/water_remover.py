@@ -47,10 +47,10 @@ class Remover():
         nstring = 'not index '
         for i in indices:
             nstring = nstring + str(i) + ' '
-    
+        
         keep_atoms = self.all_atoms.select_atoms(nstring)
         keep_atoms.write(self.gro_file)
-    
+               
     def water_remover_top(self, new):
         """
         Creates a new topology file in which the number of water particles is modified.

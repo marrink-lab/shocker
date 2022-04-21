@@ -76,7 +76,7 @@ class VolArea():
         
         self.lipids = lipids
         self.box_dim = box_dim
-        self.selection
+        self.selection = selection
         
     def boundary_corrector(self):
         """
@@ -147,7 +147,7 @@ class VolArea():
     
         if len(leaflets.groups()) > 2:
     
-            pointcloud = self.boundary_corrector(self.lipids, self.box_dim)
+            pointcloud = self.boundary_corrector()
             leaflets = MDAnalysis.analysis.leaflet.LeafletFinder(pointcloud, self.selection)
             outer = leaflets.groups(0).positions
             inner = leaflets.groups(1).positions

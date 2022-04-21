@@ -121,6 +121,7 @@ class Mover():
         --------
         array containing positions for water particles to be replaced
         """
+        sum_min_dist = 0
         placement_pos = []
         for b in chosen_bins:
 
@@ -128,7 +129,7 @@ class Mover():
             istring = 'index '
             for i in indices:
                 istring = istring + str(i) + ' '
-
+            
             w_particles = self.all_atoms.select_atoms(istring).positions
             cur_min = 0
             best_pos = 0
@@ -146,10 +147,13 @@ class Mover():
                     cur_min = min(distance)
                     best_pos = temp_pos
                 c = c + 1
-                        
+            
+            sum_min_dist = sum_min_dist + cur_min           
             placement_pos.append(best_pos)
-
-        return placement_pos
+        
+        mean_min_dist = sum_min_dist/len(placement_pos)
+        
+        return placement_pos, mean_min_dist
 
     def water_replacement_gro(self, indices, new_pos, gro_file):
         """
