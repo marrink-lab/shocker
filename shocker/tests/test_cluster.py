@@ -34,7 +34,7 @@ def test_zero_finder():
     
 @pytest.fixture
 def cluster_object():
-    universe = mda.Universe('/mnt/c/TempSim4/shocker/shocker/tests/test_data/vesicle_system.gro')
+    universe = mda.Universe('test_data/vesicle_system.gro')
     lipids = universe.select_atoms('not resname W')
     tj = universe.trajectory[0]
     box_dim = tj.dimensions
@@ -51,7 +51,7 @@ def test_l_particle_selector(cluster_object):
     # a bin system.
     test_system = cluster_object.lipids
     result = test_system.select_atoms('name D2A C3A C4A C2B C3B C4B')
-    function_result = cluster_object.l_particle_selector('/mnt/c/TempSim4/shocker/shocker/tests/test_data/Martini3.LIB')
+    function_result = cluster_object.l_particle_selector('test_data/Martini3.LIB')
     
     assert function_result == result
 

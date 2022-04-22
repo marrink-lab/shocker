@@ -27,7 +27,7 @@ def identifier_object():
     bin_clusters = [[(0,0,0),(2,2,2),(43,43,44)],
                     [(4,2,3),(5,4,3),(1,5,3)], 
                     [(13,34,23),(12,41,16),(33,22,11)]]
-    universe = mda.Universe('/mnt/c/TempSim4/shocker/shocker/tests/test_data/vesicle_system.gro')                
+    universe = mda.Universe('test_data/vesicle_system.gro')                
     tj = universe.trajectory[0]
     box_dim = tj.dimensions
     bin_size = 10

@@ -23,7 +23,7 @@ def test_center_of_geometry():
 @pytest.fixture
 def areavolume_object():
     
-    universe = mda.Universe('/mnt/c/TempSim4/shocker/shocker/tests/test_data/vesicle_data_test.gro')                
+    universe = mda.Universe('test_data/vesicle_data_test.gro')                
     lipids = universe.select_atoms('not resname W')
     tj = universe.trajectory[0]
     box_dim = tj.dimensions

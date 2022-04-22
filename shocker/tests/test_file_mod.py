@@ -21,12 +21,12 @@ def test_name_generator():
     
 def test_mdp_value_changer():
     
-    mdp_old = '/mnt/c/TempSim4/shocker/shocker/tests/test_data/test.mdp'
+    mdp_old = 'test_data/test.mdp'
     parameter = 'nsteps'
     value = 50000
     
-    result = '/mnt/c/TempSim4/shocker/shocker/tests/test_data/result.mdp'
-    function_result = '/mnt/c/TempSim4/shocker/shocker/tests/test_data/new.mdp'
+    result = 'test_data/result.mdp'
+    function_result = 'test_data/new.mdp'
     
     fm.mdp_value_changer(mdp_old, function_result, parameter, value, 'yes')
     
@@ -43,13 +43,13 @@ def test_mdp_value_changer():
     
 def test_xtc_maker():
     
-    gro_file = '/mnt/c/TempSim4/shocker/shocker/tests/test_data/water_remover_test.gro'
+    gro_file = 'test_data/water_remover_test.gro'
     universe = mda.Universe(gro_file)
     lipids = universe.select_atoms('not resname W')
     shock_nr = 44
     
-    temp_gro_name = '/mnt/c/TempSim4/shocker/shocker/tests/test_data/only_lipids_temp.gro'
-    temp_gro_name_result = '/mnt/c/TempSim4/shocker/shocker/tests/test_data/only_lipids_result.gro'
+    temp_gro_name = 'test_data/only_lipids_temp.gro'
+    temp_gro_name_result = 'test_data/only_lipids_result.gro'
     
     new_xtc_name_result = 'vesicle_sB44_t.xtc'
     new_xtc_name_function_result = fm.xtc_maker(lipids, shock_nr, temp_gro_name, 'yes')

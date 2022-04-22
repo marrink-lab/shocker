@@ -51,7 +51,7 @@ def mover_object():
                                   [0,0,2],[1,0,2],[2,0,2],
                                   [0,1,2],[1,1,2],[2,1,2],
                                   [0,2,2],[1,2,2],[2,2,2]])
-    universe = mda.Universe('/mnt/c/TempSim4/shocker/shocker/tests/test_data/test_data_water_move.gro')                
+    universe = mda.Universe('test_data/test_data_water_move.gro')                
     all_atoms = universe.select_atoms('all')
     bin_size = 10
     box_dim = [40,40,40]
@@ -94,8 +94,8 @@ def test_water_replacement_gro(mover_object):
     indices = [4,6,8]
     new_pos = np.array([[4,4,4],[1,1,1],[2,2,2]])
     
-    result = '/mnt/c/TempSim4/shocker/shocker/tests/test_data/result_data_water_move.gro'
-    function_result = '/mnt/c/TempSim4/shocker/shocker/tests/test_data/function_result_water_move.gro'
+    result = 'test_data/result_data_water_move.gro'
+    function_result = 'test_data/function_result_water_move.gro'
     
     mover_object.water_replacement_gro(indices, new_pos, function_result)
     

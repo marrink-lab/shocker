@@ -44,6 +44,8 @@ def mdp_value_changer(old, new, parameter, value, test='no'):
     -----------
     old: string
         path to the old mdp file
+    new: string
+        path to the new mdp file
     parameter: string
         parameter name to be modified
     value: integer
