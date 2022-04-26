@@ -247,6 +247,9 @@ def main():
         
         mdrun = '{} mdrun -s {} -v -x {} -c {}'
         mdrun_command = mdrun.format(args.gromacs, tpr_file, xtc_file, gro_file_2)
+        
+        subprocess.call(grompp_command, shell=True)
+        subprocess.call(mdrun_command, shell=True)
                     
     # =========================================================================
     # Post processing
