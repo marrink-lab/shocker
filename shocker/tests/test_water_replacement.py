@@ -57,9 +57,35 @@ def mover_object():
     box_dim = [40,40,40]
     nr_removed = 5
     all_bins = bin_converter(all_atoms.positions)
+    water_name = 'W'
                 
     kwargs = {"receiving_cluster": receiving_cluster, "all_atoms": all_atoms, "bin_size": bin_size, 
-              "nr_removed": nr_removed, "box_dim": box_dim, "all_bins": all_bins}
+              "nr_removed": nr_removed, "box_dim": box_dim, "all_bins": all_bins, "water_name": water_name}
+
+    return Mover(**kwargs)
+
+@pytest.fixture
+def mover_object_aa():
+    
+    receiving_cluster = np.array([[0,0,0],[1,0,0],[2,0,0],
+                                  [0,1,0],[1,1,0],[2,1,0],
+                                  [0,2,0],[1,2,0],[2,2,0],
+                                  [0,0,1],[1,0,1],[2,0,1],
+                                  [0,1,1],[1,1,1],[2,1,1],
+                                  [0,2,1],[1,2,1],[2,2,1],
+                                  [0,0,2],[1,0,2],[2,0,2],
+                                  [0,1,2],[1,1,2],[2,1,2],
+                                  [0,2,2],[1,2,2],[2,2,2]])
+    universe = mda.Universe('test_data/test_data_water_move_aa.gro')                
+    all_atoms = universe.select_atoms('all')
+    bin_size = 10
+    box_dim = [10,10,23]
+    nr_removed = 5
+    all_bins = bin_converter(all_atoms.positions)
+    water_name = 'TIP3'
+                
+    kwargs = {"receiving_cluster": receiving_cluster, "all_atoms": all_atoms, "bin_size": bin_size, 
+              "nr_removed": nr_removed, "box_dim": box_dim, "all_bins": all_bins, "water_name": water_name}
 
     return Mover(**kwargs)
 
@@ -98,6 +124,24 @@ def test_water_replacement_gro(mover_object):
     function_result = 'test_data/function_result_water_move.gro'
     
     mover_object.water_replacement_gro(indices, new_pos, function_result)
+    
+    with open(result, 'r') as res:
+        reslines = res.readlines()
+    
+    with open(function_result, 'r') as funcres:
+        funcreslines = funcres.readlines()
+        
+    assert reslines == funcreslines
+    
+def test_water_replacement_gro_aa(mover_object_aa):
+    
+    indices = [3,6,9]
+    new_pos = np.array([[4,4,4],[1,1,1],[2,2,2]])
+    
+    result = 'test_data/result_data_water_move_aa.gro'
+    function_result = 'test_data/function_result_water_move_aa.gro'
+    
+    mover_object_aa.water_replacement_gro_aa(indices, new_pos, function_result,0)
     
     with open(result, 'r') as res:
         reslines = res.readlines()

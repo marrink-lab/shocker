@@ -18,8 +18,23 @@ def remover_object():
     top_old = 'test_data/topol_test.top'
     nr_removed = 5
     gro_file = 'test_data/water_remover_function_result.gro'
+    water_name = 'W'
             
-    kwargs = {"top_old": top_old, "all_atoms": all_atoms, "nr_removed": nr_removed, "gro_file": gro_file}
+    kwargs = {"top_old": top_old, "all_atoms": all_atoms, "nr_removed": nr_removed, "gro_file": gro_file, "water_name": water_name}
+
+    return Remover(**kwargs)
+
+@pytest.fixture
+def remover_object_aa():
+    
+    universe = mda.Universe('test_data/water_remover_test_aa.gro')                
+    all_atoms = universe.select_atoms('all')
+    top_old = 'test_data/topol_test.top'
+    nr_removed = 5
+    gro_file = 'test_data/water_remover_function_result_aa.gro'
+    water_name = 'TIP3'
+            
+    kwargs = {"top_old": top_old, "all_atoms": all_atoms, "nr_removed": nr_removed, "gro_file": gro_file, "water_name": water_name}
 
     return Remover(**kwargs)
 
@@ -30,6 +45,23 @@ def test_water_remover_gro(remover_object):
     
     remover_object.water_remover_gro(indices)
     function_result = 'test_data/water_remover_function_result.gro'
+    
+    with open(result, 'r') as res:
+        reslines = res.readlines()
+    
+    with open(function_result, 'r') as funcres:
+        funcreslines = funcres.readlines()
+        
+    assert reslines == funcreslines
+    
+def test_water_remover_gro_aa(remover_object_aa):
+    
+    indices = [286, 289, 292, 295, 298]
+    result = 'test_data/water_remover_result_aa.gro'
+    oxy_pos = 0
+    
+    remover_object_aa.water_remover_gro_aa(indices, oxy_pos)
+    function_result = 'test_data/water_remover_function_result_aa.gro'
     
     with open(result, 'r') as res:
         reslines = res.readlines()

@@ -45,6 +45,19 @@ def cluster_object():
 
     return Cluster(**kwargs)
 
+@pytest.fixture
+def cluster_object_aa():
+    universe = mda.Universe('test_data/doublebilayer_test.gro')
+    lipids = universe.select_atoms('not resname TIP3')
+    tj = universe.trajectory[0]
+    box_dim = tj.dimensions
+    bin_size = 10
+    lipid_list = ['C2* C3*']
+        
+    kwargs = {"lipids": lipids, "box_dim": box_dim, "bin_size": bin_size, "lipid_list": lipid_list}
+
+    return Cluster(**kwargs)    
+
 def test_l_particle_selector(cluster_object):
     # test_system is an atomgroup consisting of all lipid particles
     # result is an atomgroup solely consisting of lipid particles used for generating
@@ -52,6 +65,13 @@ def test_l_particle_selector(cluster_object):
     test_system = cluster_object.lipids
     result = test_system.select_atoms('name D2A C3A C4A C2B C3B C4B')
     function_result = cluster_object.l_particle_selector('test_data/Martini3.LIB')
+    
+    assert function_result == result
+    
+def test_l_particle_selector_aa(cluster_object_aa):
+    test_system = cluster_object_aa.lipids
+    result = test_system.select_atoms('name C2* C3*')
+    function_result = cluster_object_aa.l_particle_selector_aa()
     
     assert function_result == result
 

@@ -6,10 +6,10 @@ Created on Wed Apr 13 14:18:34 2022
 """
 
 import numpy as np
-import shocker.src.water_identifier as wi
+import Shocker.shocker.src.water_identifier as wi
 import pytest
 import MDAnalysis as mda
-from shocker.src.water_identifier import Identifier
+from Shocker.shocker.src.water_identifier import Identifier
 
 def test_local_to_global():
     # no water is the number of particle that is not water
@@ -66,6 +66,22 @@ def test_index_finder_m(identifier_object):
                      [6,6,6],[7,3,4],[1,2,3],[3,2,1]])
     result = [0,1,14,3,5,2,4,7,9,10,13,15,8]
     function_result = identifier_object.index_finder_m(all_bins, cluster_bins)
+    
+    assert len(function_result) == identifier_object.nr_remove
+    for i in function_result:
+        assert i in result
+        
+def test_index_finder_m_aa(identifier_object):
+    
+    cluster_bins = np.array([[1,2,3],[3,2,1],[5,4,5],[4,4,4],[7,3,4],[6,5,4]])
+    all_bins = np.array([[1,2,3],[1,2,3],[4,4,4],
+                     [5,4,5],[4,4,4],[5,4,5],
+                     [1,1,1],[4,4,4],[6,5,4],
+                     [7,3,4],[7,3,4],[2,2,2],
+                     [6,6,6],[7,3,4],[1,2,3],[3,2,1]])
+    oxy_pos = 0
+    result = [0,3,9,15]
+    function_result = identifier_object.index_finder_m_aa(all_bins, cluster_bins, oxy_pos)
     
     assert len(function_result) == identifier_object.nr_remove
     for i in function_result:

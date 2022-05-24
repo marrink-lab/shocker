@@ -126,4 +126,44 @@ class Identifier():
     
         return indices[:self.nr_remove]
     
+    def index_finder_m_aa(self, w_all, w_cluster, oxy_pos):
+        """
+        Finds the indices of the clustered water bins 'w_cluster' in the complete
+        list of water bins 'w_all'. The search continues until the desired number
+        of indices 'nr_remove' is found. This specific function is used in case
+        of all-atom simulations. A water molecule with its oxygen atom inside the
+        bin is seen as 'inside'
+    
+        Parameters:
+        -----------
+        w_all: array (x, 3)
+            a list in which each water particle coordinate in the
+            system is converted to the position of the bin it resides in.
+        w_cluster: array (x, 3)
+            a list of positions of clustered water-bins (vesicle interior)
+        oxy_pos: integer
+            position of oxygen atom relative to the hydrogen atoms in the 
+            trajectory file (0, 1 or 2)
+    
+        Returns:
+        --------
+        array, indices of the water particles we want to remove from the
+        vesicle interior according to the total water list
+        """
+        indices = []
+    
+        while len(indices) < self.nr_remove:
+    
+            i = random.randint(0, len(w_cluster)-1)
+            bin_index = np.where((w_all[:, 0] == w_cluster[i][0])\
+                                 & (w_all[:, 1] == w_cluster[i][1])\
+                                     & (w_all[:, 2] == w_cluster[i][2]))[0]
+            for index in bin_index:
+                condition = (index-oxy_pos)/3
+                if condition.is_integer():
+                    indices.append(int(index))
+            #i = i + 1
+    
+        return indices[:self.nr_remove]
+    
     

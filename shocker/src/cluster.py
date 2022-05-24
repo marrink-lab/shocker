@@ -123,6 +123,25 @@ class Cluster():
         target_lipid_atoms = self.lipids.select_atoms(selection_command)
 
         return target_lipid_atoms
+    
+    def l_particle_selector_aa(self):
+        """
+        In case of all-atom simulations the carbon backbone of the lipid tails
+        are used for defining the lipid bins. The names of these particles can be 
+        specified in the 'lip' flag
+        
+        Returns:
+        --------
+        string: the atom selector command for isolating the desired tail atoms
+        """    
+        selection_command = 'name'
+        for i in self.lipid_list:
+            selection_command = selection_command + ' ' + i
+        
+        print(selection_command)
+        target_lipid_atoms = self.lipids.select_atoms(selection_command)
+        
+        return target_lipid_atoms    
 
     def bin_converter_l(self, target_lipids):
         """
