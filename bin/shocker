@@ -12,16 +12,16 @@ import argparse
 import MDAnalysis.analysis.leaflet
 import numpy as np
 import os
-import Shocker.shocker.src.cluster as cl
-import Shocker.shocker.src.file_mod as fm
-import Shocker.shocker.src.index_processing as ip
-import Shocker.shocker.src.vesicle_data as vd
-import Shocker.shocker.src.water_identifier as wi
-from Shocker.shocker.src.cluster import Cluster
-from Shocker.shocker.src.water_identifier import Identifier
-from Shocker.shocker.src.water_repositioning import Mover
-from Shocker.shocker.src.vesicle_data import VolArea
-from Shocker.shocker.src.vesicle_data import IonConcentration
+import shocker.src.cluster as cl
+import shocker.src.file_mod as fm
+import shocker.src.index_processing as ip
+import shocker.src.vesicle_data as vd
+import shocker.src.water_identifier as wi
+from shocker.src.cluster import Cluster
+from shocker.src.water_identifier import Identifier
+from shocker.src.water_repositioning import Mover
+from shocker.src.vesicle_data import VolArea
+from shocker.src.vesicle_data import IonConcentration
 
 def main():
     
