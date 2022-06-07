@@ -6,6 +6,7 @@ Created on Tue Mar  8 18:02:38 2022
 @author: marco
 """
 import subprocess
+import numpy as np
 
 def name_generator(old, shock_nr, test='no'):
     """
@@ -79,7 +80,7 @@ def mdp_value_changer(old, new, parameter, value, test='no'):
         subprocess.call(mdp_remove_command, shell=True)                   
         subprocess.call(mdp_name_change_command, shell=True)
     
-def xtc_maker(all_atoms, lipids, shock_nr, temp_gro_name, rp, test='no'):
+def xtc_maker(all_atoms, shock_nr, temp_gro_name, test='no'):
     """
     Generates xtc files from gro files each pumping cycle in order to be able
     to concatenate all files at the end of the process.
@@ -94,10 +95,7 @@ def xtc_maker(all_atoms, lipids, shock_nr, temp_gro_name, rp, test='no'):
     --------
     generates an xtc file
     """
-    if rp == 'no':
-        lipids.write(temp_gro_name)
-    else:
-        all_atoms.write(temp_gro_name)
+    all_atoms.write(temp_gro_name)
 
     if len(str(shock_nr)) == 1:
         new_name = 'vesicle_sA' + str(shock_nr) + '_t.xtc'
@@ -116,6 +114,29 @@ def xtc_maker(all_atoms, lipids, shock_nr, temp_gro_name, rp, test='no'):
         
     else:
         return new_name
+
+def gro_to_np(gro_file):
+    """
+    Converts a gro-file to a numpy array of position data
+    
+    Parameters:
+    -----------
+    gro_file: structure file
+    
+    Returns:
+    --------
+    numpy array
+    """
+    with open(gro_file, "r") as _file:
+        lines = _file.readlines()
+        n_coords = int(lines[1])
+        coords = np.zeros((n_coords, 3))
+        line_count = 0
+        for line in lines[2:-1]:
+            coords[line_count, :] = np.array(line[20:44].split(), dtype=float)
+            line_count += 1
+        
+    return coords*10 
 
 
     

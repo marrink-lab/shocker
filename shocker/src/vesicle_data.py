@@ -57,6 +57,28 @@ def center_of_geometry(points):
 
     return cog
 
+def concentration(volume, nr_ions):
+    """
+    Calculates the ion concentration in mol/L from a given volume and nr of ions
+    
+    Parameters:
+    -----------
+    volume: float
+        closed volume the ions reside in 
+    nr_ions: int
+        number of ions in the volume
+    
+    Returns:
+    --------
+    ion concentration
+    """
+    mol = nr_ions/6.022e23
+    lit = volume*1e-24
+    
+    concentration = mol/lit
+    
+    return concentration
+
 class VolArea():
     """
     Class for calculating the volume and area of a given lipid vesicle according
@@ -72,9 +94,9 @@ class VolArea():
         name of the atom type used to generate a triangulated surface
     """
     
-    def __init__(self, lipids, box_dim, selection):
+    def __init__(self, all_atoms, box_dim, selection):
         
-        self.lipids = lipids
+        self.all_atoms = all_atoms
         self.box_dim = box_dim
         self.selection = selection
         
@@ -91,7 +113,7 @@ class VolArea():
         --------
         MDAnalysis atomgroup of the GL1 beads in the system, as a whole point cloud
         """
-        cloud_particles = MDAnalysis.analysis.leaflet.LeafletFinder(self.lipids, self.selection)
+        cloud_particles = MDAnalysis.analysis.leaflet.LeafletFinder(self.all_atoms, self.selection)
     
         group_len = []
         for i, _ in enumerate(cloud_particles.groups()):
@@ -141,7 +163,7 @@ class VolArea():
         the area of the inner leaflet, the area of the outer leaflet and the vesicle
         volume.
         """
-        leaflets = MDAnalysis.analysis.leaflet.LeafletFinder(self.lipids, self.selection)
+        leaflets = MDAnalysis.analysis.leaflet.LeafletFinder(self.all_atoms, self.selection)
         outer = leaflets.groups(0).positions
         inner = leaflets.groups(1).positions
     
@@ -156,15 +178,102 @@ class VolArea():
         while result is None:
             try:
                 outer_mesh = mesh_maker(outer)
-                outer_area = outer_mesh.area
+                outer_area = outer_mesh.area/100
                 inner_mesh = mesh_maker(inner)
-                inner_area = inner_mesh.area
+                inner_area = inner_mesh.area/100
     
-                volume = inner_mesh.volume
-                result = volume
+                volume_in = inner_mesh.volume/1000
+                box_vol = np.prod(self.box_dim[:3])/1000
+                vol_ves_out = outer_mesh.volume/1000
+                volume_out = box_vol - vol_ves_out
+                result = volume_out
             except RuntimeError:
                 pass
     
-        return inner_area, outer_area, volume
+        return inner_area, outer_area, volume_in, volume_out
 
+class IonConcentration():
+    """
+    Class for calculating the ion concentration in the inner and outer compartment
+    
+    
+    """
+    def __init__(self, bin_size, box_dim, w_clusters):
+        
+        self.bin_size = bin_size
+        self.box_dim = box_dim
+        self.w_clusters = w_clusters
+        self.nr_bins = [int(x/self.bin_size) for x in self.box_dim]
+        
+    
+    def bin_converter_i(self, target_atoms):
+        """
+        Each element of a set of particles with coordinates 'target_atoms' in a
+        simulationbox of size 'box_dim' is assigned to a bin of size
+        'box_dim/nr_bins'. Units are in Angström.
+    
+        Parameters:
+        -----------
+        target_atoms: array
+            coordinates of particles in a simulation box
+    
+        Returns:
+        --------
+        array (x,3) containing the positions of the bins containing the particles in
+        'target_atoms'
+        """
+        x_pos = np.floor(target_atoms[:, 0]/self.bin_size)
+        y_pos = np.floor(target_atoms[:, 1]/self.bin_size)
+        z_pos = np.floor(target_atoms[:, 2]/self.bin_size)
+    
+        binsfloat = np.stack((x_pos, y_pos, z_pos), axis=-1)
+        bins = np.int_(binsfloat)
+    
+        for i in bins:
+            for pos in range(3):
+                if i[pos] > self.nr_bins[pos]:
+                    i[pos] = i[pos] - self.nr_bins[pos]
+                if i[pos] < 0:
+                    i[pos] = self.nr_bins[pos] + i[pos]
+        return bins
+    
+    def ion_counter(self, i_all):
+        """
+        Finds the indices of the clustered water bins 'w_cluster' in the complete
+        list of water bins 'w_all'. The search continues until the desired number
+        of indices 'nr_remove' is found. In other words: it finds the indices of the
+        water particles residing in the clustered bins
+    
+        Parameters:
+        -----------
+        w_all: array (x, 3)
+            a list in which each water particle coordinate in the
+            system is converted to the position of the bin it resides in.
+        w_cluster: array (x, 3)
+            a list of positions of clustered water-bins (vesicle interior)
+    
+        Returns:
+        --------
+        array, indices of the water particles we want to remove from the
+        vesicle interior according to the total water list
+        """
+        nr_ions = []
+    
+        for cluster in self.w_clusters:
+            
+            indices = []
+            for i, _ in enumerate(cluster):
+                
+                bin_index = np.where((i_all[:, 0] == cluster[i][0])\
+                                     & (i_all[:, 1] == cluster[i][1])\
+                                         & (i_all[:, 2] == cluster[i][2]))[0]
+                for index in bin_index:
+                    indices.append(int(index))
+            nr_ions.append(len(indices))
+            
+        return nr_ions
+    
+    
+    
+    
 

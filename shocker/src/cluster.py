@@ -65,84 +65,13 @@ class Cluster():
     lipid_list: array
         list of lipid names the vesicle is composed of        
     """
-    def __init__(self, lipids, box_dim, bin_size, lipid_list):
+    def __init__(self, all_atoms, box_dim, bin_size):
         
-        self.lipids = lipids
+        self.all_atoms = all_atoms
         self.box_dim = box_dim
         self.bin_size = bin_size
         self.nr_bins = [int(x/self.bin_size) for x in self.box_dim]
-        self.lipid_list = lipid_list
-        
-    def l_particle_selector(self, library):
-        """
-        Of each lipid in 'lipidlist' the last three tail particles are selected
-        according to the Martini3 library file.
-
-        Returns:
-        --------
-        string: the atom selector command for isolating the desired tail atoms
-        """
-        tail_particles = []
-
-        for lipid in self.lipid_list:
-
-            with open(library, 'r') as lipfile:
-                lines = lipfile.readlines()
-                for i, _ in enumerate(lines):
-                    name = lines[i].strip()[1:-1]
-
-                    if lipid == 'CHOL':
-                        tail_particles.append('C1 C2')
-
-                    elif name.replace(' ', '') == lipid:
-
-                        lipid_particles = []
-                        counter = 1
-                        while lines[i+counter] != '\n':
-                            lipid_particles.append(lines[i+counter].split()[1])
-                            counter += 1
-
-                        tail_length = int(lipid_particles[-1][1])
-                        tail_positions = [tail_length - 2, tail_length - 1, tail_length]
-
-                        for atom in lipid_particles:
-                            if atom[1] == str(tail_positions[0]) \
-                            or atom[1] == str(tail_positions[1]) \
-                            or atom[1] == str(tail_positions[2]):
-                                tail_particles.append(atom)
-
-        unique_tail_particles = []
-        for i in tail_particles:
-            if i not in unique_tail_particles:
-                unique_tail_particles.append(i)
-
-        selection_command = 'name'
-        for i in unique_tail_particles:
-            selection_command = selection_command + ' ' + str(i)
-            
-        target_lipid_atoms = self.lipids.select_atoms(selection_command)
-
-        return target_lipid_atoms
-    
-    def l_particle_selector_aa(self):
-        """
-        In case of all-atom simulations the carbon backbone of the lipid tails
-        are used for defining the lipid bins. The names of these particles can be 
-        specified in the 'lip' flag
-        
-        Returns:
-        --------
-        string: the atom selector command for isolating the desired tail atoms
-        """    
-        selection_command = 'name'
-        for i in self.lipid_list:
-            selection_command = selection_command + ' ' + i
-        
-        print(selection_command)
-        target_lipid_atoms = self.lipids.select_atoms(selection_command)
-        
-        return target_lipid_atoms    
-
+                
     def bin_converter_l(self, target_lipids):
         """
         Each element of a set of particles with coordinates 'target_lipids' in a
