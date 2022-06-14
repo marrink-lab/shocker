@@ -38,6 +38,8 @@ def package_files(directory):
     return paths
 
 setup(
-    
+    setup_requires=['wheel'],
+    package_data={'': package_files('shocker/data')
+                  + package_files('shocker/tests/test_data'),},
     scripts=['bin/shocker']
 )

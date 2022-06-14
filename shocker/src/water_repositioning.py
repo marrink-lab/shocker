@@ -55,7 +55,7 @@ class Mover():
     nr_removed: int
         number of removed particles
     """
-    def __init__(self, receiving_cluster, all_atoms, bin_size, nr_removed, box_dim, all_bins, water_name):
+    def __init__(self, receiving_cluster, all_atoms, bin_size, nr_removed, box_dim, all_bins, water_group):
         self.receiving_cluster = receiving_cluster
         self.all_atoms = all_atoms
         self.bin_size = bin_size
@@ -63,7 +63,7 @@ class Mover():
         self.nr_bins = [int(x/self.bin_size) for x in self.box_dim]
         self.nr_removed = nr_removed
         self.all_bins = all_bins
-        self.water_name = water_name
+        self.water_group = water_group
 
     def repositioning_bin_identifier(self):
         """
@@ -100,10 +100,11 @@ class Mover():
                 #print(chosen_bin)
                 #print(self.all_bins)
                 indices = index_finder(self.all_bins, chosen_bin)
+                
                 #print(indices)
                 for i in indices:
                     istring = 'index ' + str(i)
-                    if self.all_atoms.select_atoms(istring).resnames[0] != self.water_name:
+                    if len(self.water_group.select_atoms(istring)) == 0:
                         not_w_count = not_w_count + 1
 
                 if not_w_count == 0:
@@ -149,6 +150,8 @@ class Mover():
                 istring = istring + str(i) + ' '
             #print(istring)
             w_particles = self.all_atoms.select_atoms(istring).positions
+            #atypes = self.all_atoms.select_atoms(istring).types
+            #print(atypes)
             cur_min = 0
             best_pos = 0
             c = 0
@@ -167,7 +170,7 @@ class Mover():
                 c = c + 1
             
             sum_min_dist = sum_min_dist + cur_min
-            print(cur_min)
+            #print(cur_min)
             placement_pos.append(best_pos)
         
         mean_min_dist = sum_min_dist/len(placement_pos)

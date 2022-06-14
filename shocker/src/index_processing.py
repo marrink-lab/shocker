@@ -76,3 +76,22 @@ def ag_finder(ag_name, ag_list):
     ag = ag_list[0][index]
                    
     return ag
+
+def name_concatenator(name_list):
+    """
+    concatenates a list of atomgroup names, used to define the groups in the
+    mdp files.
+    
+    Parameters:
+    -----------
+    name_list: array
+    
+    Returns:
+    --------
+    string with group names
+    """
+    name_str = name_list[0]
+    for i in range(1, len(name_list)):
+        name_str = name_str + ' ' + name_list[i]
+        
+    return name_str  

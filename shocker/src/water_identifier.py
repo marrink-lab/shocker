@@ -32,13 +32,14 @@ class Identifier():
     nr_remove: int
         number of removed particles
     """
-    def __init__(self, bin_clusters, box_dim, bin_size, nr_remove):
+    def __init__(self, bin_clusters, box_dim, bin_size, nr_remove, water):
         
         self.bin_clusters = bin_clusters
         self.box_dim = box_dim
         self.bin_size = bin_size
         self.nr_bins = [int(x/self.bin_size) for x in self.box_dim]
         self.nr_remove = nr_remove
+        self.water = water
         
     def cluster_selecter(self):
         """
@@ -120,8 +121,12 @@ class Identifier():
             bin_index = np.where((w_all[:, 0] == w_cluster[i][0])\
                                  & (w_all[:, 1] == w_cluster[i][1])\
                                      & (w_all[:, 2] == w_cluster[i][2]))[0]
-            for index in bin_index:
-                indices.append(int(index))
+            if len(bin_index)>0:
+                i2 = random.randint(0, len(bin_index)-1)
+                index = bin_index[i2]
+                global_index = self.water[index].index
+                if global_index not in indices:
+                    indices.append(int(global_index))
             #i = i + 1
     
         return indices[:self.nr_remove]
@@ -161,7 +166,8 @@ class Identifier():
             for index in bin_index:
                 condition = (index-oxy_pos)/3
                 if condition.is_integer():
-                    indices.append(int(index))
+                    global_index = self.water[index].index
+                    indices.append(int(global_index))
             #i = i + 1
     
         return indices[:self.nr_remove]

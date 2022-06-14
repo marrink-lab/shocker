@@ -67,8 +67,11 @@ def mdp_value_changer(old, new, parameter, value, test='no'):
                     with open(new, 'a') as new_mdp:
                         new_mdp.write(lines_mdp[i])
                 else:
-                    spl[-1] = str(value) + '\n'
+                    while spl[-1] != '=':
+                        spl.pop()
+                    spl.append(str(value)+'\n')
                     new_spl = ' '.join(spl)
+                    
                     with open(new, 'a') as new_mdp:
                         new_mdp.write(new_spl)
     
@@ -137,6 +140,7 @@ def gro_to_np(gro_file):
             line_count += 1
         
     return coords*10 
+
 
 
     
