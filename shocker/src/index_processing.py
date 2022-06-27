@@ -7,6 +7,7 @@ Created on Wed Jun  1 11:05:18 2022
 
 import numpy as np
 
+
 def ndx_to_ag(all_atoms, infile):
     """
     Create MDAnalysis AtomGroups from a Universe and an index file.
@@ -47,12 +48,13 @@ def ndx_to_ag(all_atoms, infile):
     if group_name is not None:
         indices = np.array(indices, dtype=int) - 1
         yield (group_name, atoms[indices])
-        
+
+
 def ag_extractor(all_atoms, index_file):
     """
-    from the atomgroups available in the index file the coordinates of 
+    from the atomgroups available in the index file the coordinates of
     the membrane particles or atoms are extracted
-    
+
     Returns
     -------
     mem_pos : numpy array
@@ -65,8 +67,9 @@ def ag_extractor(all_atoms, index_file):
         for k, l in ndx_to_ag(all_atoms, infile):
             agroup.append(l)
             name.append(k)
-             
+
     return agroup, name
+
 
 def ag_finder(ag_name, ag_list):
     """
@@ -74,18 +77,19 @@ def ag_finder(ag_name, ag_list):
     """
     index = ag_list[1].index(ag_name)
     ag = ag_list[0][index]
-                   
+
     return ag
+
 
 def name_concatenator(name_list):
     """
     concatenates a list of atomgroup names, used to define the groups in the
     mdp files.
-    
+
     Parameters:
     -----------
     name_list: array
-    
+
     Returns:
     --------
     string with group names
@@ -93,5 +97,5 @@ def name_concatenator(name_list):
     name_str = name_list[0]
     for i in range(1, len(name_list)):
         name_str = name_str + ' ' + name_list[i]
-        
-    return name_str  
+
+    return name_str
