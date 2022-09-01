@@ -6,7 +6,6 @@ Created on Wed Apr 13 14:18:34 2022
 """
 
 import numpy as np
-import shocker.src.water_identifier as wi
 import pytest
 import os
 import MDAnalysis as mda
@@ -14,17 +13,6 @@ from shocker.src.water_identifier import Identifier
 from shocker import TEST_DATA
 
 data_path = TEST_DATA
-
-
-def test_local_to_global():
-
-    no_water = 500
-    local_index = [2, 4, 5, 6, 7, 34, 44, 55]
-
-    result = [502, 504, 505, 506, 507, 534, 544, 555]
-    function_result = wi.local_to_global(no_water, local_index)
-
-    assert result == function_result
 
 
 @pytest.fixture
