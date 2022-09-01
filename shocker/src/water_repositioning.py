@@ -8,7 +8,7 @@ Created on Thu Mar 24 10:04:30 2022
 
 import random
 import numpy as np
-from math import dist
+import numpy.linalg
 
 
 def index_finder(w_all, w_bin):
@@ -171,7 +171,7 @@ class Mover():
 
                 distance = []
                 for particle in w_particles:
-                    distance.append(dist(particle, temp_pos))
+                    distance.append(np.linalg.norm(particle - temp_pos))
                 if min(distance) > cur_min:
                     cur_min = min(distance)
                     best_pos = temp_pos
