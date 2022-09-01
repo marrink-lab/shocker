@@ -53,4 +53,4 @@ jobs:
     - name: Run pylint 
       run: |
          pylint --disable=fixme --fail-under=8 shocker
-         pyliny --disable=fixme --fail-under=8 bin/shocker
+         pylint --disable=fixme --fail-under=8 bin/shocker
