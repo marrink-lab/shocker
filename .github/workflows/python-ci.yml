@@ -32,7 +32,7 @@ jobs:
         
     - name: Run pytest with codecoverage
       run: |
-        coverage run --source=polyply $(which pytest) -vv polyply
+        coverage run --source=shocker $(which pytest) -vv shocker
         coverage report --omit='*/bin/pytest'
         codecov
         
