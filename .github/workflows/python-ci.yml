@@ -16,7 +16,7 @@ jobs:
     
     strategy:
       matrix:
-       py_version: ["3.6", "3.7", "3.8", "3.9"] 
+       py_version: ["3.8", "3.9"] 
 
     steps:
     - uses: actions/checkout@v2
@@ -52,5 +52,5 @@ jobs:
         pip install -r requirements-tests.txt
     - name: Run pylint 
       run: |
-         pylint --disable=fixme --fail-under=9.5 shocker
-         pyliny --disable=fixme --fail-under=9.5 bin/shocker
+         pylint --disable=fixme --fail-under=8 shocker
+         pyliny --disable=fixme --fail-under=8 bin/shocker
