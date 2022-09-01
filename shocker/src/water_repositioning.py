@@ -231,7 +231,7 @@ class Mover():
 
                 distance = []
                 for particle in ox_in_bin:
-                    distance.append(dist(particle, temp_pos))
+                    distance.append(np.linalg.norm(particle - temp_pos))
                 if min(distance) > cur_min:
                     cur_min = min(distance)
                     best_pos = temp_pos
