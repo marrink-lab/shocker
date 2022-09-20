@@ -25,6 +25,54 @@ def test_center_of_geometry():
     assert all(vd.center_of_geometry(pointcloud)) == all(cog_result)
 
 
+def test_concentration():
+
+    volume = 13000
+    nr_ions = 10000
+    result_conc = 1.28
+    function_result_conc = round(vd.concentration(volume, nr_ions), 2)
+    assert result_conc == function_result_conc
+
+
+def test_shape():
+
+    V0 = 13500
+    Ad0 = 1200
+    volume = 13000
+    inner = 2780
+    outer = 3925
+
+    result_rv = 0.96
+    result_rad = 0.95
+
+    function_result = vd.shape(V0, Ad0, volume, inner, outer)
+    function_result_rv = round(function_result[0], 2)
+    function_result_rad = round(function_result[1], 2)
+    assert result_rv == function_result_rv
+    assert result_rad == function_result_rad
+
+
+def test_gyration_tensor():
+
+    pointcloud = [(4, 4, 4), (3, 2, 3), (2, 4, 3)]
+    result = np.array([[0.66666667, 0.        , 0.33333333],
+                       [0.        , 0.88888889, 0.22222222],
+                       [0.33333333, 0.22222222, 0.22222222]])
+    function_result = vd.gyration_tensor(pointcloud)
+    assert result.all() == function_result.all()
+
+
+def test_delta():
+
+    tensor = np.array([[0.66666667, 0.        , 0.33333333],
+                       [0.        , 0.88888889, 0.22222222],
+                       [0.33333333, 0.22222222, 0.22222222]])
+
+    result = 0.26
+    function_result = round(vd.delta(tensor), 2)
+    assert result == function_result
+
+
 @pytest.fixture
 def areavolume_object():
 

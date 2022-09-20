@@ -141,6 +141,9 @@ def main():
     # Starting the pumping cycles
     # =========================================================================
 
+    V0 = 0
+    Ad0 = 0
+
     for shock in range(args.start, args.end):
 
         rupture = 'no'
@@ -380,16 +383,19 @@ def main():
         if args.vesdata == 'yes':
             if shock == 0:
                 with open('vesicle_data.txt', 'a') as data:
-                    data.write('{0:10} {1:20} {2:20}\
-                               {3:20} {4:20} {5:20}'.format(
-                               'Shock nr',
+                    data.write('{0:10} {1:20} {2:20} {3:20} {4:20} {5:20} {6:20} {7:20} {8:20}'.format(
+                               'shock nr',
                                'inner area (nm^2)',
                                'outer area (nm^2)',
                                'volume (nm^3)',
                                'inner_conc (mol/L)',
-                               'outer_conc (mol/L)'))
+                               'outer_conc (mol/L)',
+                               'reduced vol. diff.',
+                               'reduced area diff.',
+                               'sphericity'
+                               ))
                     data.write('\n')
-                    data.write('-'*110)
+                    data.write('-'*169)
                     data.write('\n')
 
             selection = 'name ' + args.cloudpoints
@@ -421,17 +427,32 @@ def main():
                 inner_conc = 0
                 outer_conc = 0
 
+            if shock == 0:
+                V0 = vol_area[2]
+                Ad0 = vol_area[1] - vol_area[0]
+
+            # Calculating reduced volume and reduced area difference
+            shape_data = vd.shape(V0, Ad0, vol_area[2], vol_area[0], vol_area[1])
+            red_vol_diff = shape_data[0]
+            red_area_diff = shape_data[1]
+
+            # Calculating the sphericity parameter delta
+            cloud = u.select_atoms(selection).positions
+            gyr_tens = vd.gyration_tensor(cloud)
+            sphericity = vd.delta(gyr_tens)
+
             with open('vesicle_data.txt', 'a') as data:
 
-                data.write('{0:<10d} {1:<20.2f}\
-                           {2:<20.2f} {3:<20.2f}\
-                               {4:<20.5f} {5:<20.5f}'.format(
+                data.write('{0:<10d} {1:<20.2f} {2:<20.2f} {3:<20.2f} {4:<20.5f} {5:<20.5f} {6:<20.5f} {7:<20.5f} {8:<20.5f}'.format(
                                shock,
                                vol_area[0],
                                vol_area[1],
                                vol_area[2],
                                inner_conc,
-                               outer_conc))
+                               outer_conc,
+                               red_vol_diff,
+                               red_area_diff,
+                               sphericity))
                 data.write('\n')
 
     # =========================================================================

@@ -8,6 +8,7 @@ Created on Tue Mar  8 18:02:58 2022
 import numpy as np
 import MDAnalysis.analysis.leaflet
 import pyvista as pv
+from numpy import linalg as LA
 
 
 def mesh_maker(cloud):
@@ -81,6 +82,96 @@ def concentration(volume, nr_ions):
     concentration = mol/lit
 
     return concentration
+
+
+def shape(V0, Ad0, vol, inner, outer):
+    """
+    Calculates the reduced volume and the reduced area difference
+
+    Parameters
+    ----------
+    V0 : float
+        Initial volume of the vesicle.
+    Ad0 : float
+        Initial area difference.
+    volume : float
+        Current vesicle volume.
+    inner : float
+        current inner vesicle area.
+    outer : float
+        current outer vesicle area.
+
+    Returns
+    -------
+    The reduced volume and the reduced area difference.
+    """
+    rv = vol/V0
+    ad = outer - inner
+    rad = ad/Ad0
+
+    return rv, rad
+
+
+def gyration_tensor(cloud):
+    """
+    Calculates the gyration tensor of a set of points in 3D space
+
+    Parameters
+    ----------
+    cloud : array
+        positions of particle type.
+
+    Returns
+    -------
+    Gyration tensor
+    """
+    com = center_of_geometry(cloud)
+    corrected_cloud = cloud - com
+    N = len(corrected_cloud)
+
+    g_tensor = np.zeros((3, 3))
+
+    for i in corrected_cloud:
+        g_tensor[0][0] = g_tensor[0][0] + (i[0]*i[0])
+        g_tensor[0][1] = g_tensor[0][1] + (i[0]*i[1])
+        g_tensor[0][2] = g_tensor[0][2] + (i[0]*i[2])
+        g_tensor[1][0] = g_tensor[1][0] + (i[1]*i[0])
+        g_tensor[1][1] = g_tensor[1][1] + (i[1]*i[1])
+        g_tensor[1][2] = g_tensor[1][2] + (i[1]*i[2])
+        g_tensor[2][0] = g_tensor[2][0] + (i[2]*i[0])
+        g_tensor[2][1] = g_tensor[2][1] + (i[2]*i[1])
+        g_tensor[2][2] = g_tensor[2][2] + (i[2]*i[2])
+
+    g_tensor = g_tensor/N
+
+    return g_tensor
+
+
+def delta(tensor):
+    """
+    Calculates the sphericity tensor
+
+    Parameters
+    ----------
+    tensor : array
+        gyration tensor.
+
+    Returns
+    -------
+    Sphericity tensor delta.
+    """
+    values, vectors = LA.eig(tensor)
+
+    trace = np.matrix.trace(tensor)
+    lab_bar = trace/3
+
+    c = 0
+    for i in values:
+        c = c + ((i - lab_bar)**2)
+
+    d = (c/((trace)**2))*(3/2)
+
+    return d
 
 
 class VolArea():
