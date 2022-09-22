@@ -36,7 +36,7 @@ def main():
                         help='nr of removed particles per shock')
     parser.add_argument('-e', '--end', type=int,
                         help='nr of the last cycle')
-    parser.add_argument('-b', '--bins', type=float, default=1.0,
+    parser.add_argument('-b', '--bins', type=float, default=1.3,
                         help='bin size for clustering \
                             (standard size is 1nm^3)')
     parser.add_argument('-s', '--start', type=int, default=0,
