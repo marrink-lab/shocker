@@ -43,7 +43,7 @@ In order to perform an osmotic shock simulation Shocker needs an equilibrated si
 ## Example 1: Hypertonic shock on a vesicle
 A simulation of a hypertonic osmotic shock on a vesicle is executed with the following command:
 ```
-shocker -c POPC_vesicle.gro -p topol.top -r 200 -s 0 -e 200 -n index.ndx
+shocker -c POPC_vesicle.gro -p topol_POPC.top -r 200 -s 0 -e 200 -n index_POPC.ndx
 ```
 (-r) indicates the number of solvent particles relocated each pumping cycle  
 (-s) is the starting cycle  
@@ -55,7 +55,7 @@ When the process is finished the simulation directory contains a folder called '
 ## Example 2: Shape analysis during hypertonic shock on a vesicle
 The Shocker package contains a few analysis methods that enables the user to monitor the shape of a vesicle over the course of the osmotic shock simulation. In this case we consider a simulation box containing a vesicle in a solvent with ions. The simulation and data calculation is executed with the following command:
 ```
-shocker -c POPC_vesicle_ions.gro -p topol.top -r 200 -s 0 -e 200 -n index.ndx -vd yes -i yes
+shocker -c POPC_ion.gro -p topol_ion.top -r 200 -s 0 -e 200 -n index_ion.ndx -vd yes -i yes
 ```
 (-vd) indicates if vesicle data should be calculated  
 (-i) indicates the presence of ions  
@@ -65,5 +65,5 @@ If both of these values are set to 'yes' a file named 'vesicle_data.txt' will be
 ## Example 3: Hypotonic osmotic shock
 Except for deflating vesicles during a hypertonic shock, Shocker is capable of performing hypotonic shock simulations to study the effects of volume increase. Such a simulation can be initiated as follows:
 ```
-shocker -c POPC_vesicle_hypo.gro -p topol.top -r 200 -s 0 -e 200 -n index.ndx -shock hypotonic
+shocker -c POPC_ion.gro -p topol_ion.top -r 200 -s 0 -e 200 -n index_ion.ndx -shock hypotonic
 ```
