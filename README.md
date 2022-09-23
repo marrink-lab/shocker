@@ -22,7 +22,7 @@ Peregrine
 Snellius
 ```
 module load 2021
-module load module load Python/3.9.5-GCCcore-10.3.0
+module load Python/3.9.5-GCCcore-10.3.0
 ```
 
 Install from setup folder
