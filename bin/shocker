@@ -41,7 +41,7 @@ def main():
                             (standard size is 1nm^3)')
     parser.add_argument('-s', '--start', type=int, default=0,
                         help='define the starting cycle')
-    parser.add_argument('-x', '--xtc', type=int, default=0,
+    parser.add_argument('-xf', '--xtc', type=int, default=10000,
                         help='frequency of storing position data \
                             (default = 0)')
     parser.add_argument('-n', '--index',
@@ -363,9 +363,8 @@ def main():
         fm.name_generator(tpr_file, shock)
 
         # making and saving an .xtc file
-        fm.xtc_maker(all_atoms, shock, 'only_lipids_temp.gro')
-        subprocess.call('mv *.xtc shockfiles', shell=True)
-
+        fm.name_generator(xtc_file, shock)
+        
         # Save one gro file of the vesicle only
         if shock == 0:
             all_atoms.write('vesicle_shock.gro')
@@ -430,7 +429,13 @@ def main():
             if shock == 0:
                 V0 = vol_area[2]
                 Ad0 = vol_area[1] - vol_area[0]
-
+            
+            else:
+                with open('vesicle_data.txt', 'r') as data:
+                    lines = data.readlines()
+                    V0 = float(lines[2].split()[3])
+                    Ad0 = float(lines[2].split()[2]) - float(lines[2].split()[1])
+                    
             # Calculating reduced volume and reduced area difference
             shape_data = vd.shape(V0, Ad0, vol_area[2], vol_area[0], vol_area[1])
             red_vol_diff = shape_data[0]
