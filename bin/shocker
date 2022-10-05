@@ -101,6 +101,20 @@ def main():
 
     if args.restart == 'no' and os.path.exists('shockfiles') == False:
         gro_file_original = args.name
+
+    if args.start != 0:
+        subprocess.call('rm osmotic_shock*', shell=True)
+        for filename in os.listdir('shockfiles'):
+
+            if filename.split('.')[-1] == 'gro' and len(filename.split('_')) == 3:
+
+                nr = int(filename.split('_')[-1][1:-4])
+
+                if nr == args.start - 1:
+                    restart = filename
+
+        gro_file_original = 'shockfiles/' + restart
+
     else:
         subprocess.call('rm osmotic_shock*', shell=True)
         last = 0
@@ -170,6 +184,8 @@ def main():
     rupture = 'no'
 
     if args.restart == 'no' and os.path.exists('shockfiles') == False:
+        start = 0
+    if args.start != 0:
         start = args.start
     else:
         start = restart_cycle
