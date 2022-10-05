@@ -99,7 +99,7 @@ def main():
     # Creating the universe and initial gro file
     # =========================================================================
 
-    if args.restart == 'no':
+    if args.restart == 'no' and os.path.exists('shockfiles') == False:
         gro_file_original = args.name
     else:
         subprocess.call('rm osmotic_shock*', shell=True)
@@ -169,7 +169,7 @@ def main():
     Ad0 = 0
     rupture = 'no'
 
-    if args.restart == 'no':
+    if args.restart == 'no' and os.path.exists('shockfiles') == False:
         start = args.start
     else:
         start = restart_cycle
