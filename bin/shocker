@@ -30,6 +30,8 @@ def main():
                                      add_help=True)
     parser.add_argument('-c', '--name',
                         help='name of the files')
+    parser.add_argument('-ct', '--restart', default='no',
+                        help='restart from last cycle')
     parser.add_argument('-p', '--topology',
                         help='topology file')
     parser.add_argument('-r', '--removed', type=int,
@@ -97,7 +99,29 @@ def main():
     # Creating the universe and initial gro file
     # =========================================================================
 
-    gro_file_original = args.name
+    if args.restart == 'no':
+        gro_file_original = args.name
+    else:
+        subprocess.call('rm osmotic_shock*', shell=True)
+        last = 0
+        last_file = 'first'
+
+        for filename in os.listdir('shockfiles'):
+
+            if filename.split('.')[-1] == 'gro' and len(filename.split('_')) == 3:
+
+                sp1 = filename.split('_')[-1]
+                sp2 = sp1.split('s')[-1]
+                sp3 = int(sp2.split('.')[0])
+
+                if sp3 > last:
+                    last = sp3
+                    last_file = filename
+        restart = last_file
+        restart_cycle = last + 1
+
+        gro_file_original = 'shockfiles/' + restart
+
     copy_command = 'cp {} osmotic_shock.gro'.format(gro_file_original)
     subprocess.call(copy_command, shell=True)
     gro_file = 'osmotic_shock.gro'
@@ -143,10 +167,15 @@ def main():
 
     V0 = 0
     Ad0 = 0
+    rupture = 'no'
 
-    for shock in range(args.start, args.end):
+    if args.restart == 'no':
+        start = args.start
+    else:
+        start = restart_cycle
 
-        rupture = 'no'
+    for shock in range(start, args.end):
+
         placement_check = 1
         backup_pos = u.select_atoms('all').positions
 
@@ -429,13 +458,13 @@ def main():
             if shock == 0:
                 V0 = vol_area[2]
                 Ad0 = vol_area[1] - vol_area[0]
-            
+
             else:
                 with open('vesicle_data.txt', 'r') as data:
                     lines = data.readlines()
                     V0 = float(lines[2].split()[3])
                     Ad0 = float(lines[2].split()[2]) - float(lines[2].split()[1])
-                    
+
             # Calculating reduced volume and reduced area difference
             shape_data = vd.shape(V0, Ad0, vol_area[2], vol_area[0], vol_area[1])
             red_vol_diff = shape_data[0]
