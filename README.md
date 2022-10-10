@@ -68,4 +68,17 @@ shocker -c POPC_ion.gro -p topol_ion.top -r 200 -e 200 -n index_ion.ndx -shock h
 ```
 
 ## Restart/continue
-When initiating a new simulation Shocker always starts with iteration 0. If a pumping simulation is executed in a folder that already contains pumping data, Shocker continues from the last pumping cycle (e.g. in case of sudden termination). If the user wants to repeat a part of the simulation, the -s flag can be used to provide the number of the cycle from which Shocker should start.  
+When initiating a new simulation Shocker always starts with iteration 0. If a pumping simulation is executed in a folder that already contains pumping data, Shocker continues from the last pumping cycle (e.g. in case of sudden termination). If the user wants to repeat a part of the simulation, the -s flag can be used to provide the number of the cycle from which Shocker should start.
+
+## Extra mdrun options
+As default the mdrun command is executed using the minimum amount of imput options. Especially when running Shocker on a cluster the user may want to add some extra options. This can be done by providing an option file (text file) with the -options flag, for example:
+
+```
+-ntmpi 6
+-ntomp 3
+-dlb auto
+-pin on
+-nb gpu
+-bonded gpu
+```
+
