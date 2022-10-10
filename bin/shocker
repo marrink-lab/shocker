@@ -91,6 +91,8 @@ def main():
     parser.add_argument('-oxy', '--oxygen_pos', type=int, default=0,
                         help='position of the oxygen atom relative to the \
                             hydrogens (0, 1 or 2)')
+    parser.add_argument('-options', '--gmx_options', default='none',
+                        help='extra mdrun options file')
     args = parser.parse_args()
 
     data_path = DATA_PATH
@@ -99,7 +101,7 @@ def main():
     # Creating the universe and initial gro file
     # =========================================================================
 
-    if os.path.exists('shockfiles') == False or args.restart == 'no':
+    if os.path.exists('shockfiles') == False:
         gro_file_original = args.name
 
     else:
@@ -175,8 +177,6 @@ def main():
     fm.mdp_value_changer(mdp_file, 'new.mdp', 'dt', args.production_timestep)
     fm.mdp_value_changer(mdp_file2, 'new.mdp', 'dt', args.slow_timestep)
 
-    # creating a destination folder to store all generated files
-    subprocess.call('mkdir shockfiles', shell=True)
 
     # =========================================================================
     # Starting the pumping cycles
@@ -186,10 +186,13 @@ def main():
     Ad0 = 0
     rupture = 'no'
 
-    if not os.listdir('shockfiles') or args.restart == 'no':
+    if os.path.exists('shockfiles') == False:
         start = 0
     else:
         start = restart_cycle
+
+    # creating a destination folder to store all generated files
+    subprocess.call('mkdir shockfiles', shell=True)
 
     for shock in range(start, args.end):
 
@@ -356,7 +359,16 @@ def main():
             # =================================================================
 
             grompp = '{} grompp -f {} -c {} -p {} -o {} -n {} -maxwarn 1'
-            mdrun = '{} mdrun -ntmpi 6 -ntomp 3 -dlb auto -pin on -nb gpu -bonded gpu -s {} -v -x {} -c {}'
+
+            if args.gmx_options == 'none':
+                mdrun = '{} mdrun -s {} -v -x {} -c {}'
+            else:
+                options = ' '
+                with open(args.gmx_options, 'r') as data:
+                    rl = data.readlines()
+                    for i in rl:
+                        options = options + i.strip() + ' '
+                mdrun = '{} mdrun' + options + '-s {} -v -x {} -c {}'
 
             grompp_command_slow = grompp.format(args.gromacs,
                                                 mdp_file2,
@@ -410,7 +422,7 @@ def main():
 
         # making and saving an .xtc file
         fm.name_generator(xtc_file, shock)
-        
+
         # Save one gro file of the vesicle only
         if shock == 0:
             all_atoms.write('vesicle_shock.gro')
