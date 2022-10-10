@@ -6,12 +6,12 @@ Created on Wed Mar  9 11:47:21 2022
 @author: marco
 """
 
-import MDAnalysis as mda
-import subprocess
+import os
 import argparse
+import subprocess
+import MDAnalysis as mda
 import MDAnalysis.analysis.leaflet
 import numpy as np
-import os
 import shocker.src.cluster as cl
 import shocker.src.file_mod as fm
 import shocker.src.index_processing as ip
@@ -105,41 +105,41 @@ def main():
         gro_file_original = args.name
 
     else:
-            if args.start != 0:
-                subprocess.call('rm osmotic_shock*', shell=True)
+        if args.start != 0:
+            subprocess.call('rm osmotic_shock*', shell=True)
 
-                for filename in os.listdir('shockfiles'):
+            for filename in os.listdir('shockfiles'):
 
-                    if filename.split('.')[-1] == 'gro' and len(filename.split('_')) == 3:
-                        nr = int(filename.split('_')[-1][1:-4])
+                if filename.split('.')[-1] == 'gro' and len(filename.split('_')) == 3:
+                    nr = int(filename.split('_')[-1][1:-4])
 
-                        if nr == args.start - 1:
-                            restart = filename
-                            gro_file_original = 'shockfiles/' + restart
-                            restart_cycle = args.start
-                        else:
-                            print('The pumping cycle you would like to restart does not exist.')
+                    if nr == args.start - 1:
+                        restart = filename
+                        gro_file_original = 'shockfiles/' + restart
+                        restart_cycle = args.start
+                    else:
+                        print('The pumping cycle you would like to restart does not exist.')
 
-            else:
-                subprocess.call('rm osmotic_shock*', shell=True)
-                last = 0
-                last_file = 'first'
+        else:
+            subprocess.call('rm osmotic_shock*', shell=True)
+            last = 0
+            last_file = 'first'
 
-                for filename in os.listdir('shockfiles'):
+            for filename in os.listdir('shockfiles'):
 
-                    if filename.split('.')[-1] == 'gro' and len(filename.split('_')) == 3:
+                if filename.split('.')[-1] == 'gro' and len(filename.split('_')) == 3:
 
-                        sp1 = filename.split('_')[-1]
-                        sp2 = sp1.split('s')[-1]
-                        sp3 = int(sp2.split('.')[0])
+                    sp1 = filename.split('_')[-1]
+                    sp2 = sp1.split('s')[-1]
+                    sp3 = int(sp2.split('.')[0])
 
-                        if sp3 > last:
-                            last = sp3
-                            last_file = filename
-                restart = last_file
-                restart_cycle = last + 1
+                    if sp3 > last:
+                        last = sp3
+                        last_file = filename
+            restart = last_file
+            restart_cycle = last + 1
 
-                gro_file_original = 'shockfiles/' + restart
+            gro_file_original = 'shockfiles/' + restart
 
     copy_command = 'cp {} osmotic_shock.gro'.format(gro_file_original)
     subprocess.call(copy_command, shell=True)
