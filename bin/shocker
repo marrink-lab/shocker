@@ -45,7 +45,7 @@ def main():
                         help='define the starting cycle')
     parser.add_argument('-xf', '--xtc', type=int, default=10000,
                         help='frequency of storing position data \
-                            (default = 0)')
+                            (default = 10000)')
     parser.add_argument('-n', '--index',
                         help='index file containing membrane,\
                             solvent and possibly ions')
@@ -176,7 +176,6 @@ def main():
     fm.mdp_value_changer(mdp_file2, 'new.mdp', 'ref_t', reft)
     fm.mdp_value_changer(mdp_file, 'new.mdp', 'dt', args.production_timestep)
     fm.mdp_value_changer(mdp_file2, 'new.mdp', 'dt', args.slow_timestep)
-
 
     # =========================================================================
     # Starting the pumping cycles
@@ -418,7 +417,7 @@ def main():
         u.select_atoms('all').positions = new_coord
 
         # renaming storing tpr file
-        fm.name_generator(tpr_file, shock)
+        #fm.name_generator(tpr_file, shock)
 
         # making and saving an .xtc file
         fm.name_generator(xtc_file, shock)
@@ -427,6 +426,11 @@ def main():
         if shock == 0:
             all_atoms.write('vesicle_shock.gro')
             subprocess.call('mv vesicle_shock.gro shockfiles', shell=True)
+
+        prev_gro = 'shockfiles/osmotic_shock_s' + str(shock - 1) + '.gro'
+        if os.path.exists(prev_gro) == True:
+            remove_old_gro = 'rm ' + prev_gro
+            subprocess.call(remove_old_gro, shell=True)
 
         # Removing all backups and log files
         subprocess.call('rm *#', shell=True)
@@ -438,22 +442,6 @@ def main():
 
         # Calculating the volume and surface area and writing to file
         if args.vesdata == 'yes':
-            if shock == 0:
-                with open('vesicle_data.txt', 'a') as data:
-                    data.write('{0:10} {1:20} {2:20} {3:20} {4:20} {5:20} {6:20} {7:20} {8:20}'.format(
-                               'shock nr',
-                               'inner area (nm^2)',
-                               'outer area (nm^2)',
-                               'volume (nm^3)',
-                               'inner_conc (mol/L)',
-                               'outer_conc (mol/L)',
-                               'reduced vol. diff.',
-                               'reduced area diff.',
-                               'sphericity'
-                               ))
-                    data.write('\n')
-                    data.write('-'*169)
-                    data.write('\n')
 
             selection = 'name ' + args.cloudpoints
             broken_system = VolArea(membrane,
@@ -484,9 +472,25 @@ def main():
                 inner_conc = 0
                 outer_conc = 0
 
-            if shock == 0:
-                V0 = vol_area[2]
-                Ad0 = vol_area[1] - vol_area[0]
+            if os.path.exists('vesicle_data.txt') == False:
+                with open('vesicle_data.txt', 'a') as data:
+                    data.write('{0:10} {1:20} {2:20} {3:20} {4:20} {5:20} {6:20} {7:20} {8:20}'.format(
+                               'shock nr',
+                               'inner area (nm^2)',
+                               'outer area (nm^2)',
+                               'volume (nm^3)',
+                               'inner_conc (mol/L)',
+                               'outer_conc (mol/L)',
+                               'reduced vol. diff.',
+                               'reduced area diff.',
+                               'sphericity'
+                               ))
+                    data.write('\n')
+                    data.write('-'*169)
+                    data.write('\n')
+
+                    V0 = vol_area[2]
+                    Ad0 = vol_area[1] - vol_area[0]
 
             else:
                 with open('vesicle_data.txt', 'r') as data:
@@ -554,7 +558,6 @@ def main():
     concatcommand = 'gmx trjcat -cat -f shockfiles/*.xtc\
         -o shockfiles/vesicle_shock.xtc'
     subprocess.call(concatcommand, shell=True)
-    subprocess.call('rm shockfiles/*t.xtc', shell=True)
 
 
 if __name__ == '__main__':
