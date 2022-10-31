@@ -6,12 +6,12 @@ Created on Wed Mar  9 11:47:21 2022
 @author: marco
 """
 
-import MDAnalysis as mda
-import subprocess
+import os
 import argparse
+import subprocess
+import MDAnalysis as mda
 import MDAnalysis.analysis.leaflet
 import numpy as np
-import os
 import shocker.src.cluster as cl
 import shocker.src.file_mod as fm
 import shocker.src.index_processing as ip
@@ -30,20 +30,22 @@ def main():
                                      add_help=True)
     parser.add_argument('-c', '--name',
                         help='name of the files')
+    parser.add_argument('-ct', '--restart', default='no',
+                        help='restart from last cycle')
     parser.add_argument('-p', '--topology',
                         help='topology file')
     parser.add_argument('-r', '--removed', type=int,
                         help='nr of removed particles per shock')
     parser.add_argument('-e', '--end', type=int,
                         help='nr of the last cycle')
-    parser.add_argument('-b', '--bins', type=float, default=1.0,
+    parser.add_argument('-b', '--bins', type=float, default=1.3,
                         help='bin size for clustering \
                             (standard size is 1nm^3)')
     parser.add_argument('-s', '--start', type=int, default=0,
                         help='define the starting cycle')
-    parser.add_argument('-x', '--xtc', type=int, default=0,
+    parser.add_argument('-xf', '--xtc', type=int, default=10000,
                         help='frequency of storing position data \
-                            (default = 0)')
+                            (default = 10000)')
     parser.add_argument('-n', '--index',
                         help='index file containing membrane,\
                             solvent and possibly ions')
@@ -89,6 +91,8 @@ def main():
     parser.add_argument('-oxy', '--oxygen_pos', type=int, default=0,
                         help='position of the oxygen atom relative to the \
                             hydrogens (0, 1 or 2)')
+    parser.add_argument('-options', '--gmx_options', default='none',
+                        help='extra mdrun options file')
     args = parser.parse_args()
 
     data_path = DATA_PATH
@@ -97,7 +101,46 @@ def main():
     # Creating the universe and initial gro file
     # =========================================================================
 
-    gro_file_original = args.name
+    if os.path.exists('shockfiles') == False:
+        gro_file_original = args.name
+
+    else:
+        if args.start != 0:
+            subprocess.call('rm osmotic_shock*', shell=True)
+
+            for filename in os.listdir('shockfiles'):
+
+                if filename.split('.')[-1] == 'gro' and len(filename.split('_')) == 3:
+                    nr = int(filename.split('_')[-1][1:-4])
+
+                    if nr == args.start - 1:
+                        restart = filename
+                        gro_file_original = 'shockfiles/' + restart
+                        restart_cycle = args.start
+                    else:
+                        print('The pumping cycle you would like to restart does not exist.')
+
+        else:
+            subprocess.call('rm osmotic_shock*', shell=True)
+            last = 0
+            last_file = 'first'
+
+            for filename in os.listdir('shockfiles'):
+
+                if filename.split('.')[-1] == 'gro' and len(filename.split('_')) == 3:
+
+                    sp1 = filename.split('_')[-1]
+                    sp2 = sp1.split('s')[-1]
+                    sp3 = int(sp2.split('.')[0])
+
+                    if sp3 > last:
+                        last = sp3
+                        last_file = filename
+            restart = last_file
+            restart_cycle = last + 1
+
+            gro_file_original = 'shockfiles/' + restart
+
     copy_command = 'cp {} osmotic_shock.gro'.format(gro_file_original)
     subprocess.call(copy_command, shell=True)
     gro_file = 'osmotic_shock.gro'
@@ -134,16 +177,24 @@ def main():
     fm.mdp_value_changer(mdp_file, 'new.mdp', 'dt', args.production_timestep)
     fm.mdp_value_changer(mdp_file2, 'new.mdp', 'dt', args.slow_timestep)
 
-    # creating a destination folder to store all generated files
-    subprocess.call('mkdir shockfiles', shell=True)
-
     # =========================================================================
     # Starting the pumping cycles
     # =========================================================================
 
-    for shock in range(args.start, args.end):
+    V0 = 0
+    Ad0 = 0
+    rupture = 'no'
 
-        rupture = 'no'
+    if os.path.exists('shockfiles') == False:
+        start = 0
+    else:
+        start = restart_cycle
+
+    # creating a destination folder to store all generated files
+    subprocess.call('mkdir shockfiles', shell=True)
+
+    for shock in range(start, args.end):
+
         placement_check = 1
         backup_pos = u.select_atoms('all').positions
 
@@ -306,8 +357,17 @@ def main():
             # Executing the relaxation simulation
             # =================================================================
 
-            grompp = '{} grompp -f {} -c {} -p {} -o {} -n {}'
-            mdrun = '{} mdrun -s {} -v -x {} -c {}'
+            grompp = '{} grompp -f {} -c {} -p {} -o {} -n {} -maxwarn 1'
+
+            if args.gmx_options == 'none':
+                mdrun = '{} mdrun -s {} -v -x {} -c {}'
+            else:
+                options = ' '
+                with open(args.gmx_options, 'r') as data:
+                    rl = data.readlines()
+                    for i in rl:
+                        options = options + i.strip() + ' '
+                mdrun = '{} mdrun' + options + '-s {} -v -x {} -c {}'
 
             grompp_command_slow = grompp.format(args.gromacs,
                                                 mdp_file2,
@@ -357,16 +417,20 @@ def main():
         u.select_atoms('all').positions = new_coord
 
         # renaming storing tpr file
-        fm.name_generator(tpr_file, shock)
+        #fm.name_generator(tpr_file, shock)
 
         # making and saving an .xtc file
-        fm.xtc_maker(all_atoms, shock, 'only_lipids_temp.gro')
-        subprocess.call('mv *.xtc shockfiles', shell=True)
+        fm.name_generator(xtc_file, shock)
 
         # Save one gro file of the vesicle only
         if shock == 0:
             all_atoms.write('vesicle_shock.gro')
             subprocess.call('mv vesicle_shock.gro shockfiles', shell=True)
+
+        prev_gro = 'shockfiles/osmotic_shock_s' + str(shock - 1) + '.gro'
+        if os.path.exists(prev_gro) == True:
+            remove_old_gro = 'rm ' + prev_gro
+            subprocess.call(remove_old_gro, shell=True)
 
         # Removing all backups and log files
         subprocess.call('rm *#', shell=True)
@@ -378,19 +442,6 @@ def main():
 
         # Calculating the volume and surface area and writing to file
         if args.vesdata == 'yes':
-            if shock == 0:
-                with open('vesicle_data.txt', 'a') as data:
-                    data.write('{0:10} {1:20} {2:20}\
-                               {3:20} {4:20} {5:20}'.format(
-                               'Shock nr',
-                               'inner area (nm^2)',
-                               'outer area (nm^2)',
-                               'volume (nm^3)',
-                               'inner_conc (mol/L)',
-                               'outer_conc (mol/L)'))
-                    data.write('\n')
-                    data.write('-'*110)
-                    data.write('\n')
 
             selection = 'name ' + args.cloudpoints
             broken_system = VolArea(membrane,
@@ -421,17 +472,54 @@ def main():
                 inner_conc = 0
                 outer_conc = 0
 
+            if os.path.exists('vesicle_data.txt') == False:
+                with open('vesicle_data.txt', 'a') as data:
+                    data.write('{0:10} {1:20} {2:20} {3:20} {4:20} {5:20} {6:20} {7:20} {8:20}'.format(
+                               'shock nr',
+                               'inner area (nm^2)',
+                               'outer area (nm^2)',
+                               'volume (nm^3)',
+                               'inner_conc (mol/L)',
+                               'outer_conc (mol/L)',
+                               'reduced vol. diff.',
+                               'reduced area diff.',
+                               'sphericity'
+                               ))
+                    data.write('\n')
+                    data.write('-'*169)
+                    data.write('\n')
+
+                    V0 = vol_area[2]
+                    Ad0 = vol_area[1] - vol_area[0]
+
+            else:
+                with open('vesicle_data.txt', 'r') as data:
+                    lines = data.readlines()
+                    V0 = float(lines[2].split()[3])
+                    Ad0 = float(lines[2].split()[2]) - float(lines[2].split()[1])
+
+            # Calculating reduced volume and reduced area difference
+            shape_data = vd.shape(V0, Ad0, vol_area[2], vol_area[0], vol_area[1])
+            red_vol_diff = shape_data[0]
+            red_area_diff = shape_data[1]
+
+            # Calculating the sphericity parameter delta
+            cloud = u.select_atoms(selection).positions
+            gyr_tens = vd.gyration_tensor(cloud)
+            sphericity = vd.delta(gyr_tens)
+
             with open('vesicle_data.txt', 'a') as data:
 
-                data.write('{0:<10d} {1:<20.2f}\
-                           {2:<20.2f} {3:<20.2f}\
-                               {4:<20.5f} {5:<20.5f}'.format(
+                data.write('{0:<10d} {1:<20.2f} {2:<20.2f} {3:<20.2f} {4:<20.5f} {5:<20.5f} {6:<20.5f} {7:<20.5f} {8:<20.5f}'.format(
                                shock,
                                vol_area[0],
                                vol_area[1],
                                vol_area[2],
                                inner_conc,
-                               outer_conc))
+                               outer_conc,
+                               red_vol_diff,
+                               red_area_diff,
+                               sphericity))
                 data.write('\n')
 
     # =========================================================================
@@ -470,7 +558,6 @@ def main():
     concatcommand = 'gmx trjcat -cat -f shockfiles/*.xtc\
         -o shockfiles/vesicle_shock.xtc'
     subprocess.call(concatcommand, shell=True)
-    subprocess.call('rm shockfiles/*t.xtc', shell=True)
 
 
 if __name__ == '__main__':

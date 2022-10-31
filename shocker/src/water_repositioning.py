@@ -161,12 +161,12 @@ class Mover():
             best_pos = 0
             c = 0
             while c < 10000:
-                randx = random.uniform((b[0]+0.2)*self.bin_size,
-                                       (b[0]+0.8)*self.bin_size)
-                randy = random.uniform((b[1]+0.2)*self.bin_size,
-                                       (b[1]+0.8)*self.bin_size)
-                randz = random.uniform((b[2]+0.2)*self.bin_size,
-                                       (b[2]+0.8)*self.bin_size)
+                randx = random.uniform((b[0]+0.3)*self.bin_size,
+                                       (b[0]+0.7)*self.bin_size)
+                randy = random.uniform((b[1]+0.3)*self.bin_size,
+                                       (b[1]+0.7)*self.bin_size)
+                randz = random.uniform((b[2]+0.3)*self.bin_size,
+                                       (b[2]+0.7)*self.bin_size)
                 temp_pos = [randx, randy, randz]
 
                 distance = []

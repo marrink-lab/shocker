@@ -27,7 +27,16 @@ def name_generator(old, shock_nr, test='no'):
     """
     no_ext = old.split('.')[0]
     ext = old.split('.')[1]
-    new_name = no_ext + '_' + 's' + str(shock_nr) + '.' + ext
+    
+    if ext == 'xtc':
+        if len(str(shock_nr)) == 1:
+            new_name = 'vesicle_sA' + str(shock_nr) + '_t.xtc'
+        elif len(str(shock_nr)) == 2:
+            new_name = 'vesicle_sB' + str(shock_nr) + '_t.xtc'
+        else:
+            new_name = 'vesicle_sC' + str(shock_nr) + '_t.xtc'
+    else:
+        new_name = no_ext + '_' + 's' + str(shock_nr) + '.' + ext
 
     if test == 'no':
         name_change_command = 'mv ' + old + ' ' + new_name
