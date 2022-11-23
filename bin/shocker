@@ -28,6 +28,8 @@ def main():
 
     parser = argparse.ArgumentParser(description='Osmotic shock simulator',
                                      add_help=True)
+    parser.add_argument('-f', '--mdp',
+                        help='mdp file containing input parameters')
     parser.add_argument('-c', '--name',
                         help='name of the files')
     parser.add_argument('-ct', '--restart', default='no',
@@ -152,28 +154,33 @@ def main():
     # Defining and modifying mdp files
     # =========================================================================
 
-    mdp_file_path = os.path.join(data_path, 'martini_md_anis.mdp')
-    mdp_file2_path = os.path.join(data_path, 'martini_md_anis_slow.mdp')
-    mdp_min = os.path.join(data_path, 'min.mdp')
-    copy_command_mdp = 'cp {} martini_md_anis.mdp'.format(mdp_file_path)
-    copy_command_mdp2 = 'cp {} martini_md_anis_slow.mdp'.format(mdp_file2_path)
+    mdp_file = args.mdp
+    copy_command_mdp = 'cp {} mdp_file_slow.mdp'.format(mdp_file)
     subprocess.call(copy_command_mdp, shell=True)
-    subprocess.call(copy_command_mdp2, shell=True)
-    mdp_file = 'martini_md_anis.mdp'
-    mdp_file2 = 'martini_md_anis_slow.mdp'
+    mdp_file2 = 'mdp_file_slow.mdp'
+
+    # mdp_file_path = os.path.join(data_path, 'martini_md_anis.mdp')
+    # mdp_file2_path = os.path.join(data_path, 'martini_md_anis_slow.mdp')
+    mdp_min = os.path.join(data_path, 'min.mdp')
+    # copy_command_mdp = 'cp {} martini_md_anis.mdp'.format(mdp_file_path)
+    # copy_command_mdp2 = 'cp {} martini_md_anis_slow.mdp'.format(mdp_file2_path)
+    # subprocess.call(copy_command_mdp, shell=True)
+    # subprocess.call(copy_command_mdp2, shell=True)
+    # mdp_file = 'martini_md_anis.mdp'
+    # mdp_file2 = 'martini_md_anis_slow.mdp'
     fm.mdp_value_changer(mdp_file, 'new.mdp', 'nsteps', args.iterations)
     fm.mdp_value_changer(mdp_file2, 'new.mdp', 'nsteps', args.iterations_slow)
     fm.mdp_value_changer(mdp_file, 'new.mdp', 'nstxout-compressed', args.xtc)
-    group_names = ip.ag_extractor(u, args.index)[1]
-    name_string = ip.name_concatenator(group_names)
-    fm.mdp_value_changer(mdp_file, 'new.mdp', 'tc-grps', name_string)
-    fm.mdp_value_changer(mdp_file2, 'new.mdp', 'tc-grps', name_string)
-    taut = '1.0 '*len(group_names)
-    reft = '310 '*len(group_names)
-    fm.mdp_value_changer(mdp_file, 'new.mdp', 'tau_t', taut)
-    fm.mdp_value_changer(mdp_file2, 'new.mdp', 'tau_t', taut)
-    fm.mdp_value_changer(mdp_file, 'new.mdp', 'ref_t', reft)
-    fm.mdp_value_changer(mdp_file2, 'new.mdp', 'ref_t', reft)
+    # group_names = ip.ag_extractor(u, args.index)[1]
+    # name_string = ip.name_concatenator(group_names)
+    # fm.mdp_value_changer(mdp_file, 'new.mdp', 'tc-grps', name_string)
+    # fm.mdp_value_changer(mdp_file2, 'new.mdp', 'tc-grps', name_string)
+    # taut = '1.0 '*len(group_names)
+    # reft = '310 '*len(group_names)
+    # fm.mdp_value_changer(mdp_file, 'new.mdp', 'tau_t', taut)
+    # fm.mdp_value_changer(mdp_file2, 'new.mdp', 'tau_t', taut)
+    # fm.mdp_value_changer(mdp_file, 'new.mdp', 'ref_t', reft)
+    # fm.mdp_value_changer(mdp_file2, 'new.mdp', 'ref_t', reft)
     fm.mdp_value_changer(mdp_file, 'new.mdp', 'dt', args.production_timestep)
     fm.mdp_value_changer(mdp_file2, 'new.mdp', 'dt', args.slow_timestep)
 
@@ -419,13 +426,18 @@ def main():
         # renaming storing tpr file
         #fm.name_generator(tpr_file, shock)
 
-        # making and saving an .xtc file
-        fm.name_generator(xtc_file, shock)
-
         # Save one gro file of the vesicle only
         if shock == 0:
             all_atoms.write('vesicle_shock.gro')
+            subprocess.call('mdvwhole -f vesicle_shock.gro', shell=True)
             subprocess.call('mv vesicle_shock.gro shockfiles', shell=True)
+
+        # making cycle trajectory whole
+        whole_command = 'mdvwhole -f shockfiles/vesicle_shock.gro -x ' + xtc_file + ' -o whole.xtc'
+        subprocess.call(whole_command, shell=True)
+
+        # making and saving an .xtc file
+        fm.name_generator(xtc_file, shock)
 
         prev_gro = 'shockfiles/osmotic_shock_s' + str(shock - 1) + '.gro'
         if os.path.exists(prev_gro) == True:
@@ -444,7 +456,9 @@ def main():
         if args.vesdata == 'yes':
 
             selection = 'name ' + args.cloudpoints
-            broken_system = VolArea(membrane,
+            whole_u = mda.Universe('whole.gro', 'whole.xtc')
+            system_whole = whole_u.select_atoms('all')
+            broken_system = VolArea(system_whole,
                                     box_dimensions,
                                     selection)
             try:
@@ -549,15 +563,6 @@ def main():
 
         subprocess.call(grompp_command, shell=True)
         subprocess.call(mdrun_command, shell=True)
-
-    # =========================================================================
-    # Post processing
-    # =========================================================================
-
-    # Concatenating the xtc files
-    concatcommand = 'gmx trjcat -cat -f shockfiles/*.xtc\
-        -o shockfiles/vesicle_shock.xtc'
-    subprocess.call(concatcommand, shell=True)
 
 
 if __name__ == '__main__':
