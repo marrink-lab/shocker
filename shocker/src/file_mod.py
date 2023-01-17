@@ -29,12 +29,16 @@ def name_generator(old, shock_nr, test='no'):
     ext = old.split('.')[1]
     
     if ext == 'xtc':
-        if len(str(shock_nr)) == 1:
-            new_name = 'vesicle_sA' + str(shock_nr) + '_t.xtc'
-        elif len(str(shock_nr)) == 2:
-            new_name = 'vesicle_sB' + str(shock_nr) + '_t.xtc'
-        else:
-            new_name = 'vesicle_sC' + str(shock_nr) + '_t.xtc'
+        empty = '00000'
+        pre = empty[:5-len(str(shock_nr))]
+        new_name = 'vesicle_s' + pre + str(shock_nr) + '.xtc'
+        
+        # if len(str(shock_nr)) == 1:
+        #     new_name = 'vesicle_sA' + str(shock_nr) + '_t.xtc'
+        # elif len(str(shock_nr)) == 2:
+        #     new_name = 'vesicle_sB' + str(shock_nr) + '_t.xtc'
+        # else:
+        #     new_name = 'vesicle_sC' + str(shock_nr) + '_t.xtc'
     else:
         new_name = no_ext + '_' + 's' + str(shock_nr) + '.' + ext
 

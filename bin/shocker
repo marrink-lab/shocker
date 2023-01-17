@@ -405,10 +405,20 @@ def main():
             subprocess.call(mdrun_command, shell=True)
 
             file_list = os.listdir()
-            if gro_file_2 in file_list:
-                placement_check = 0
-            else:
+            lincs_warning = 0
+            for file in file_list:
+                if 'step' in str(file):
+                    lincs_warning = 1
+                    with open('errors.txt', 'a') as data:
+                        data.write('Lincs warnings during shock nr ' + str(shock))
+                        data.write('\n')
+                        
+            if lincs_warning == 1:
                 all_atoms.positions = backup_pos
+                subprocess.call('rm *# step*', shell=True)
+
+            else:
+                placement_check = 0
 
         if rupture == 'yes':
             break
