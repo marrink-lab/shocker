@@ -16,6 +16,7 @@ import shocker.src.cluster as cl
 import shocker.src.file_mod as fm
 import shocker.src.index_processing as ip
 import shocker.src.vesicle_data as vd
+import shocker.src.water_identifier as wi
 from shocker.src.cluster import Cluster
 from shocker.src.water_identifier import Identifier
 from shocker.src.water_repositioning import Mover
@@ -191,6 +192,10 @@ def main():
     V0 = 0
     Ad0 = 0
     rupture = 'no'
+    shocktype = args.shocktype
+    remember_ss = 'no'
+    if shocktype == 'steadystate':
+        remember_ss = 'yes'
 
     if os.path.exists('shockfiles') == False:
         start = 0
@@ -203,6 +208,7 @@ def main():
     for shock in range(start, args.end):
 
         placement_check = 1
+        repeat = 0
         backup_pos = u.select_atoms('all').positions
 
         while placement_check == 1:
@@ -221,7 +227,8 @@ def main():
             tj = u.trajectory[0]
             box_dimensions = tj.dimensions
             bin_size_a = args.bins*10
-
+            nr_removed = args.removed
+            
             # =================================================================
             # Clustering water particles in both compartements
             # =================================================================
@@ -232,18 +239,22 @@ def main():
             lipid_bins_single = cl.multiples_remover(lipid_bins)
 
             bin_system = cluster_box.bin_system_maker(lipid_bins_single)
-            bin_clusters = cluster_box.cluster_finder(bin_system)
+            bin_clusters, hb_bin_clusters = cluster_box.cluster_finder(bin_system)
 
             # =================================================================
             # Identifying water particles to reposition
             # =================================================================
 
             identify = Identifier(bin_clusters, box_dimensions, bin_size_a,
-                                  args.removed, water)
+                                  water)
+            identify_hb = Identifier(hb_bin_clusters, box_dimensions, bin_size_a,
+                                     water)
 
             water_clusters = identify.cluster_selecter()
+            water_clusters_hb = identify_hb.cluster_selecter()
             inner_cluster = water_clusters[0]
             outer_cluster = water_clusters[1]
+            inner_cluster_hb = cl.multiples_remover(water_clusters_hb[0])
 
             if len(inner_cluster) < 100:
                 rupture = 'yes'
@@ -253,33 +264,69 @@ def main():
             water_bins = identify.bin_converter_w(water_pos)
             all_bins = identify.bin_converter_w(all_atoms_pos)
 
+            if shocktype == 'steadystate':
+
+                if args.all_atom == 'no':
+                    nr_water_inside = wi.water_counter(water_bins,
+                                                       inner_cluster_hb)
+                else:
+                    nr_water_inside = wi.water_counter_aa(water_bins,
+                                                          inner_cluster_hb,
+                                                          args.oxygen_pos)
+
+                if os.path.exists('initial_water_count.txt') == False:
+                    with open('initial_water_count.txt', 'a') as data:
+                        data.write(str(nr_water_inside))
+                        amount_0 = nr_water_inside
+
+                else:
+                    with open('initial_water_count.txt', 'r') as data:
+                        lines = data.readlines()
+                        amount_0 = int(lines[0])
+
+                difference = amount_0 - nr_water_inside
+                nr_removed = int(0.0035*amount_0)
+                
+                if difference == 0:
+                    nr_removed = 1
+
+                if difference > 0:
+                    shocktype = 'hypotonic'
+                else:
+                    shocktype = 'hypertonic'
+
+
             if args.all_atom == 'no':
-                if args.shocktype == 'hypertonic':
+                if shocktype == 'hypertonic':
                     remove_water = identify.index_finder_m(water_bins,
-                                                           inner_cluster)
+                                                           inner_cluster,
+                                                           nr_removed)
                 else:
                     remove_water = identify.index_finder_m(water_bins,
-                                                           outer_cluster)
+                                                           outer_cluster,
+                                                           nr_removed)
             else:
-                if args.shocktype == 'hypertonic':
+                if shocktype == 'hypertonic':
                     remove_water = identify.index_finder_m_aa(water_bins,
                                                               inner_cluster,
-                                                              args.oxygen_pos)
+                                                              args.oxygen_pos,
+                                                              nr_removed)
                 else:
                     remove_water = identify.index_finder_m_aa(water_bins,
                                                               outer_cluster,
-                                                              args.oxygen_pos)
+                                                              args.oxygen_pos,
+                                                              nr_removed)
 
             # =================================================================
             # Calculating new positions for water particles
             # =================================================================
 
-            if args.shocktype == 'hypertonic':
+            if shocktype == 'hypertonic':
 
                 file_collection = Mover(outer_cluster,
                                         all_atoms,
                                         bin_size_a,
-                                        args.removed,
+                                        nr_removed,
                                         box_dimensions,
                                         all_bins,
                                         water)
@@ -306,7 +353,7 @@ def main():
                 file_collection = Mover(inner_cluster,
                                         all_atoms,
                                         bin_size_a,
-                                        args.removed,
+                                        nr_removed,
                                         box_dimensions,
                                         all_bins,
                                         water)
@@ -329,6 +376,8 @@ def main():
                         gro_file,
                         args.oxygen_pos)
 
+            if remember_ss == 'yes':
+                shocktype = 'steadystate'
             # =================================================================
             # Data needed for relaxation run
             # =================================================================
@@ -342,7 +391,11 @@ def main():
             # Performing energy minimization if needed
             # =================================================================
 
-            if args.emruns == 'yes':
+            if args.emruns == 'yes' or repeat > 2:
+                
+                with open('errors.txt', 'a') as data:
+                    data.write('EM executed at shock nr ' + str(shock))
+                    data.write('\n')
 
                 grompp_em = '{} grompp -f {} -c {} -p {} -maxwarn 1'
                 grompp_command_em = grompp_em.format(args.gromacs,
@@ -350,7 +403,17 @@ def main():
                                                      gro_file,
                                                      topology_file)
 
-                mdrun_command_em = '{} mdrun -v'.format(args.gromacs)
+                if args.gmx_options == 'none':
+                    mdrun = '{} mdrun -v'
+                else:
+                    options = ' '
+                    with open(args.gmx_options, 'r') as data:
+                        rl = data.readlines()
+                        for i in rl:
+                            options = options + i.strip() + ' '
+                    mdrun = '{} mdrun' + options + '-v'
+
+                mdrun_command_em = mdrun.format(args.gromacs)
                 em_name_change_command = 'mv confout.gro {}'.format(gro_file)
                 tpr_remove_command = 'rm topol.tpr'
 
@@ -409,12 +472,14 @@ def main():
             for file in file_list:
                 if 'step' in str(file):
                     lincs_warning = 1
-                    with open('errors.txt', 'a') as data:
-                        data.write('Lincs warnings during shock nr ' + str(shock))
-                        data.write('\n')
-                        
+
             if lincs_warning == 1:
                 all_atoms.positions = backup_pos
+                repeat = repeat + 1
+                print(repeat)
+                with open('errors.txt', 'a') as data:
+                    data.write('Lincs warnings during shock nr ' + str(shock))
+                    data.write('\n')
                 subprocess.call('rm *# step*', shell=True)
 
             else:

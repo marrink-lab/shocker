@@ -93,23 +93,27 @@ class Mover():
         array containing the bins water particles are moved to
         """
         cluster_length = len(self.receiving_cluster)
-
+        print(cluster_length)
         chosen_bins = []
-        rand_nr_storage = []
         best_not_w_count = 0
         best_bin = 0
         tries = 0
-        while len(chosen_bins) < self.nr_removed:
-            random_nr = random.randint(0, cluster_length-1)
+        counter = 0
+        random_list = np.array(range(cluster_length-1))
+        random.shuffle(random_list)
+        #print(random_list)
+        #print(len(random_list))
+        while len(chosen_bins) < self.nr_removed and counter < cluster_length - 1:
 
-            if random_nr not in rand_nr_storage:
+            random_nr = random_list[counter]
 
-                rand_nr_storage.append(random_nr)
-                chosen_bin = self.receiving_cluster[random_nr]
+            chosen_bin = self.receiving_cluster[random_nr]
 
-                not_w_count = 0
+            not_w_count = 0
 
-                indices = index_finder(self.all_bins, chosen_bin)
+            indices = index_finder(self.all_bins, chosen_bin)
+
+            if len(indices) > 0:
 
                 for i in indices:
                     istring = 'index ' + str(i)
@@ -120,14 +124,15 @@ class Mover():
                     chosen_bins.append(chosen_bin)
                     best_not_w_count = 0
                 else:
-                    if not_w_count < best_not_w_count:
+                    if tries == 0 or not_w_count < best_not_w_count:
                         best_not_w_count = not_w_count
                         best_bin = self.receiving_cluster[random_nr]
-                        tries = tries + 1
-                if tries == 10:
+                    tries = tries + 1
+                if tries == 5:
                     chosen_bins.append(best_bin)
                     tries = 0
-
+            counter = counter + 1
+        print(len(chosen_bins))
         return chosen_bins
 
     def position_generator(self, chosen_bins):
@@ -146,44 +151,59 @@ class Mover():
         --------
         array containing positions for water particles to be replaced
         """
+        multimeter = int(np.ceil(self.nr_removed/len(chosen_bins)))
         sum_min_dist = 0
         placement_pos = []
+
         for b in chosen_bins:
+            counter = 1
+            found = []
+            while counter <= multimeter:
 
-            indices = index_finder(self.all_bins, b)
-            istring = 'index '
-            for i in indices:
-                istring = istring + str(i) + ' '
+                indices = index_finder(self.all_bins, b)
+                istring = 'index '
+                for i in indices:
+                    istring = istring + str(i) + ' '
+                print(istring)
+                w_particles = self.all_atoms.select_atoms(istring).positions
 
-            w_particles = self.all_atoms.select_atoms(istring).positions
+                cur_min = 0
+                best_pos = 0
+                c = 0
+                while c < 10000:
+                    randx = random.uniform((b[0]+0.3)*self.bin_size,
+                                           (b[0]+0.7)*self.bin_size)
+                    randy = random.uniform((b[1]+0.3)*self.bin_size,
+                                           (b[1]+0.7)*self.bin_size)
+                    randz = random.uniform((b[2]+0.3)*self.bin_size,
+                                           (b[2]+0.7)*self.bin_size)
+                    temp_pos = [randx, randy, randz]
 
-            cur_min = 0
-            best_pos = 0
-            c = 0
-            while c < 10000:
-                randx = random.uniform((b[0]+0.3)*self.bin_size,
-                                       (b[0]+0.7)*self.bin_size)
-                randy = random.uniform((b[1]+0.3)*self.bin_size,
-                                       (b[1]+0.7)*self.bin_size)
-                randz = random.uniform((b[2]+0.3)*self.bin_size,
-                                       (b[2]+0.7)*self.bin_size)
-                temp_pos = [randx, randy, randz]
+                    distance = []
+                    for particle in w_particles:
+                        distance.append(np.linalg.norm(particle - temp_pos))
+                    if len(found) > 0:
+                        for placed in found:
+                            distance.append(np.linalg.norm(np.array(placed)
+                                                           - temp_pos))
 
-                distance = []
-                for particle in w_particles:
-                    distance.append(np.linalg.norm(particle - temp_pos))
-                if min(distance) > cur_min:
-                    cur_min = min(distance)
-                    best_pos = temp_pos
-                c = c + 1
+                    if min(distance) > cur_min:
+                        cur_min = min(distance)
+                        best_pos = temp_pos
+                    c = c + 1
+                counter = counter + 1
 
-            sum_min_dist = sum_min_dist + cur_min
+                sum_min_dist = sum_min_dist + cur_min
 
-            placement_pos.append(best_pos)
+                placement_pos.append(best_pos)
+                found.append(best_pos)
+
+        random.shuffle(placement_pos)
+        placement_pos_final = placement_pos[:self.nr_removed]
 
         mean_min_dist = sum_min_dist/len(placement_pos)
 
-        return placement_pos, mean_min_dist
+        return placement_pos_final, mean_min_dist
 
     def position_generator_aa(self, chosen_bins, oxy_pos):
         """
