@@ -43,7 +43,7 @@ def name_generator(old, shock_nr, test='no'):
         dir_change = 'mv ' + new_name + ' shockfiles'
         subprocess.call(dir_change, shell=True)
         if ext == 'xtc':
-            subprocess.call('rm *.xtc', shell=True)
+            subprocess.call('rm osmotic_shock.xtc', shell=True)
     else:
         return new_name
 

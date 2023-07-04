@@ -265,7 +265,7 @@ def main():
             outer_cluster = water_clusters[1]
             inner_cluster_hb = cl.multiples_remover(water_clusters_hb[0])
 
-            if len(inner_cluster) < 100:
+            if len(inner_cluster) < 50:
                 rupture = 'yes'
                 break
 
