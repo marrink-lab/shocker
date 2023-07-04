@@ -96,6 +96,12 @@ def main():
                             hydrogens (0, 1 or 2)')
     parser.add_argument('-options', '--gmx_options', default='none',
                         help='extra mdrun options file')
+    parser.add_argument('-sv', '--search', type=int, default=3,
+                        help='defines the distance from the bin edges shocker \
+                        looks for suitable locations')
+    parser.add_argument('-e', '--eval', type=int, default=10,
+                        help='number of evaluation rounds before pumping in \
+                            steady-state simulation')
     args = parser.parse_args()
 
     data_path = DATA_PATH
@@ -192,8 +198,10 @@ def main():
     V0 = 0
     Ad0 = 0
     rupture = 'no'
+    shock_go = 'yes'
     shocktype = args.shocktype
     remember_ss = 'no'
+
     if shocktype == 'steadystate':
         remember_ss = 'yes'
 
@@ -228,7 +236,8 @@ def main():
             box_dimensions = tj.dimensions
             bin_size_a = args.bins*10
             nr_removed = args.removed
-            
+            search_volume = args.search
+
             # =================================================================
             # Clustering water particles in both compartements
             # =================================================================
@@ -266,6 +275,8 @@ def main():
 
             if shocktype == 'steadystate':
 
+                shock_go = 'no'
+
                 if args.all_atom == 'no':
                     nr_water_inside = wi.water_counter(water_bins,
                                                        inner_cluster_hb)
@@ -278,103 +289,118 @@ def main():
                     with open('initial_water_count.txt', 'a') as data:
                         data.write(str(nr_water_inside))
                         amount_0 = nr_water_inside
-
+                
                 else:
                     with open('initial_water_count.txt', 'r') as data:
                         lines = data.readlines()
                         amount_0 = int(lines[0])
 
                 difference = amount_0 - nr_water_inside
-                nr_removed = int(0.0035*amount_0)
+                with open('differences.txt', 'a') as data:
+                    data.write(str(difference))
+                    data.write('\n')
+
+                eval_rounds = args.eval
+                if (shock+1)%eval_rounds == 0:
+                    shock_go = 'yes'
+                    with open('differences.txt' ,'r') as data:
+                        lines = data.readlines()[-10:]
+                        diff_sum = 0
+                        for i in lines:
+                            diff_sum = diff_sum + int(i)
+                        mean_diff = int(diff_sum/10)
+                        
+                    if mean_diff > 0:
+                        shocktype = 'hypotonic'
+                        nr_removed = mean_diff
+                    else:
+                        shocktype = 'hypertonic'
+                        nr_removed = abs(mean_diff)
+                    print(nr_removed)
+
+            if shock_go == 'yes':
                 
-                if difference == 0:
-                    nr_removed = 1
-
-                if difference > 0:
-                    shocktype = 'hypotonic'
+                if args.all_atom == 'no':
+                    if shocktype == 'hypertonic':
+                        remove_water = identify.index_finder_m(water_bins,
+                                                               inner_cluster,
+                                                               nr_removed)
+                    else:
+                        remove_water = identify.index_finder_m(water_bins,
+                                                               outer_cluster,
+                                                               nr_removed)
                 else:
-                    shocktype = 'hypertonic'
-
-
-            if args.all_atom == 'no':
-                if shocktype == 'hypertonic':
-                    remove_water = identify.index_finder_m(water_bins,
-                                                           inner_cluster,
-                                                           nr_removed)
-                else:
-                    remove_water = identify.index_finder_m(water_bins,
-                                                           outer_cluster,
-                                                           nr_removed)
-            else:
-                if shocktype == 'hypertonic':
-                    remove_water = identify.index_finder_m_aa(water_bins,
-                                                              inner_cluster,
-                                                              args.oxygen_pos,
-                                                              nr_removed)
-                else:
-                    remove_water = identify.index_finder_m_aa(water_bins,
-                                                              outer_cluster,
-                                                              args.oxygen_pos,
-                                                              nr_removed)
+                    if shocktype == 'hypertonic':
+                        remove_water = identify.index_finder_m_aa(water_bins,
+                                                                  inner_cluster,
+                                                                  args.oxygen_pos,
+                                                                  nr_removed)
+                    else:
+                        remove_water = identify.index_finder_m_aa(water_bins,
+                                                                  outer_cluster,
+                                                                  args.oxygen_pos,
+                                                                  nr_removed)
 
             # =================================================================
             # Calculating new positions for water particles
             # =================================================================
 
-            if shocktype == 'hypertonic':
+                if shocktype == 'hypertonic':
 
-                file_collection = Mover(outer_cluster,
-                                        all_atoms,
-                                        bin_size_a,
-                                        nr_removed,
-                                        box_dimensions,
-                                        all_bins,
-                                        water)
-                repositioning_bins = \
-                    file_collection.repositioning_bin_identifier()
+                    file_collection = Mover(outer_cluster,
+                                            all_atoms,
+                                            bin_size_a,
+                                            nr_removed,
+                                            box_dimensions,
+                                            all_bins,
+                                            water,
+                                            search_volume)
+                    repositioning_bins = \
+                        file_collection.repositioning_bin_identifier()
 
-                if args.all_atom == 'no':
-                    new_positions = file_collection.position_generator(
-                        repositioning_bins)[0]
-                    file_collection.water_repositioning_gro(remove_water,
-                                                            new_positions,
-                                                            gro_file)
+                    if args.all_atom == 'no':
+                        new_positions = file_collection.position_generator(
+                            repositioning_bins)[0]
+                        file_collection.water_repositioning_gro(remove_water,
+                                                                new_positions,
+                                                                gro_file)
+                    else:
+                        new_positions = file_collection.position_generator_aa(
+                            repositioning_bins,
+                            args.oxygen_pos)[0]
+                        file_collection.water_repositioning_gro_aa(
+                            remove_water,
+                            new_positions,
+                            gro_file,
+                            args.oxygen_pos)
+
                 else:
-                    new_positions = file_collection.position_generator_aa(
-                        repositioning_bins,
-                        args.oxygen_pos)[0]
-                    file_collection.water_repositioning_gro_aa(
-                        remove_water,
-                        new_positions,
-                        gro_file,
-                        args.oxygen_pos)
+                    file_collection = Mover(inner_cluster,
+                                            all_atoms,
+                                            bin_size_a,
+                                            nr_removed,
+                                            box_dimensions,
+                                            all_bins,
+                                            water,
+                                            search_volume)
+                    repositioning_bins = \
+                        file_collection.repositioning_bin_identifier()
 
-            else:
-                file_collection = Mover(inner_cluster,
-                                        all_atoms,
-                                        bin_size_a,
-                                        nr_removed,
-                                        box_dimensions,
-                                        all_bins,
-                                        water)
-                repositioning_bins = \
-                    file_collection.repositioning_bin_identifier()
-
-                if args.all_atom == 'no':
-                    new_positions = file_collection.position_generator(
-                        repositioning_bins)[0]
-                    file_collection.water_repositioning_gro(remove_water,
-                                                            new_positions,
-                                                            gro_file)
-                else:
-                    new_positions = file_collection.position_generator_aa(
-                        repositioning_bins,
-                        args.oxygen_pos)[0]
-                    file_collection.water_repositioning_gro_aa(
-                        remove_water,
-                        new_positions,
-                        gro_file,
-                        args.oxygen_pos)
+                    if args.all_atom == 'no':
+                        new_positions = file_collection.position_generator(
+                            repositioning_bins)[0]
+                        file_collection.water_repositioning_gro(remove_water,
+                                                                new_positions,
+                                                                gro_file)
+                    else:
+                        new_positions = file_collection.position_generator_aa(
+                            repositioning_bins,
+                            args.oxygen_pos)[0]
+                        file_collection.water_repositioning_gro_aa(
+                            remove_water,
+                            new_positions,
+                            gro_file,
+                            args.oxygen_pos)
 
             if remember_ss == 'yes':
                 shocktype = 'steadystate'
@@ -392,7 +418,7 @@ def main():
             # =================================================================
 
             if args.emruns == 'yes' or repeat > 2:
-                
+
                 with open('errors.txt', 'a') as data:
                     data.write('EM executed at shock nr ' + str(shock))
                     data.write('\n')

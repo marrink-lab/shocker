@@ -70,7 +70,8 @@ class Mover():
                  nr_removed,
                  box_dim,
                  all_bins,
-                 water_group):
+                 water_group,
+                 search_volume):
 
         self.receiving_cluster = receiving_cluster
         self.all_atoms = all_atoms
@@ -80,6 +81,7 @@ class Mover():
         self.nr_removed = nr_removed
         self.all_bins = all_bins
         self.water_group = water_group
+        self.search_volume = search_volume
 
     def repositioning_bin_identifier(self):
         """
@@ -156,6 +158,7 @@ class Mover():
         placement_pos = []
 
         for b in chosen_bins:
+            print(b)
             counter = 1
             found = []
             while counter <= multimeter:
@@ -164,19 +167,29 @@ class Mover():
                 istring = 'index '
                 for i in indices:
                     istring = istring + str(i) + ' '
-                print(istring)
+
                 w_particles = self.all_atoms.select_atoms(istring).positions
 
                 cur_min = 0
                 best_pos = 0
                 c = 0
                 while c < 10000:
-                    randx = random.uniform((b[0]+0.3)*self.bin_size,
-                                           (b[0]+0.7)*self.bin_size)
-                    randy = random.uniform((b[1]+0.3)*self.bin_size,
-                                           (b[1]+0.7)*self.bin_size)
-                    randz = random.uniform((b[2]+0.3)*self.bin_size,
-                                           (b[2]+0.7)*self.bin_size)
+                    randx = random.uniform((b[0]*self.bin_size)
+                                           + self.search_volume,
+                                           (b[0] * self.bin_size)
+                                           + (self.bin_size
+                                              - self.search_volume))
+                    randy = random.uniform((b[1]*self.bin_size)
+                                           + self.search_volume,
+                                           (b[1] * self.bin_size)
+                                           + (self.bin_size
+                                              - self.search_volume))
+                    randz = random.uniform((b[2]*self.bin_size)
+                                           + self.search_volume,
+                                           (b[2] * self.bin_size)
+                                           + (self.bin_size
+                                              - self.search_volume))
+
                     temp_pos = [randx, randy, randz]
 
                     distance = []
@@ -194,7 +207,7 @@ class Mover():
                 counter = counter + 1
 
                 sum_min_dist = sum_min_dist + cur_min
-
+                print(best_pos)
                 placement_pos.append(best_pos)
                 found.append(best_pos)
 
