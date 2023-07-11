@@ -523,7 +523,10 @@ def main():
 
         new_coord = fm.gro_to_np(gro_file_2)
         u.select_atoms('all').positions = new_coord
-
+        
+        if shock_go =='no':
+            subprocess.call('mv osmotic_shock2.gro osmotic_shock.gro', shell=True)
+        
         # renaming storing tpr file
         #fm.name_generator(tpr_file, shock)
 
