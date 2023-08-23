@@ -499,7 +499,7 @@ def main():
                 if 'step' in str(file):
                     lincs_warning = 1
 
-            if lincs_warning == 1:
+            if lincs_warning == 1 and 'osmotic_shock2.gro' not in file_list:
                 all_atoms.positions = backup_pos
                 repeat = repeat + 1
                 print(repeat)
@@ -582,13 +582,13 @@ def main():
                     inner_conc = vd.concentration(vol_area[2], inner_ions)
                     outer_conc = vd.concentration(vol_area[3], outer_ions)
                 else:
-                    inner_conc = 0
-                    outer_conc = 0
+                    inner_conc = np.nan
+                    outer_conc = np.nan
 
             except IndexError:
-                vol_area = [0, 0, 0]
-                inner_conc = 0
-                outer_conc = 0
+                vol_area = [np.nan, np.nan, np.nan]
+                inner_conc = np.nan
+                outer_conc = np.nan
 
             if os.path.exists('vesicle_data.txt') == False:
                 with open('vesicle_data.txt', 'a') as data:

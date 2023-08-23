@@ -102,25 +102,45 @@ def test_bin_system_maker(cluster_object):
 
 
 def test_neighbor_view(cluster_object):
+    hb = []
     function_storage = []
     cur = [1, 1, 1]
     direction = (1, 0, 0)
-    function_system = np.zeros((3, 3, 3))
+    function_system = np.zeros((5, 5, 5))
     result_storage = [(2, 1, 1)]
-    result_system = np.array([[[0., 0., 0.],
-                               [0., 0., 0.],
-                               [0., 0., 0.]],
+    result_system = np.array([[[0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.]],
 
-                              [[0., 0., 0.],
-                               [0., 0., 0.],
-                               [0., 0., 0.]],
+                              [[0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.]],
 
-                              [[0., 0., 0.],
-                               [0., -1., 0.],
-                               [0., 0., 0.]]])
+                              [[0., 0., 0., 0., 0.],
+                               [0., -1., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.]],
+
+                              [[0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.]],
+
+                              [[0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.],
+                               [0., 0., 0., 0., 0.]]])
     cluster_object.neighbor_view(direction,
                                  function_system,
                                  function_storage,
+                                 hb,
                                  cur)
 
     assert function_storage == result_storage
@@ -151,5 +171,5 @@ def test_cluster_finder(cluster_object):
 
     cluster_function = cluster_object.cluster_finder(test_system)
 
-    assert set(cluster_function[0]) == set(out_cluster_test)
-    assert set(cluster_function[1]) == set(in_cluster_test)
+    assert set(cluster_function[0][0]) == set(out_cluster_test)
+    assert set(cluster_function[0][1]) == set(in_cluster_test)
