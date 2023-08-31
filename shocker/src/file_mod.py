@@ -29,20 +29,21 @@ def name_generator(old, shock_nr, test='no'):
     ext = old.split('.')[1]
     
     if ext == 'xtc':
-        if len(str(shock_nr)) == 1:
-            new_name = 'vesicle_sA' + str(shock_nr) + '_t.xtc'
-        elif len(str(shock_nr)) == 2:
-            new_name = 'vesicle_sB' + str(shock_nr) + '_t.xtc'
-        else:
-            new_name = 'vesicle_sC' + str(shock_nr) + '_t.xtc'
+        empty = '00000'
+        pre = empty[:5-len(str(shock_nr))]
+        new_name = 'vesicle_s' + pre + str(shock_nr) + '.xtc'
+
     else:
         new_name = no_ext + '_' + 's' + str(shock_nr) + '.' + ext
 
     if test == 'no':
-        name_change_command = 'mv ' + old + ' ' + new_name
+        
+        name_change_command = 'cp ' + old + ' ' + new_name
         subprocess.call(name_change_command, shell=True)
         dir_change = 'mv ' + new_name + ' shockfiles'
         subprocess.call(dir_change, shell=True)
+        if ext == 'xtc':
+            subprocess.call('rm osmotic_shock.xtc', shell=True)
     else:
         return new_name
 

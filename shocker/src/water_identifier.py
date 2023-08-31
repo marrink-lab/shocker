@@ -9,6 +9,38 @@ import numpy as np
 import random
 
 
+def water_counter(w_all, w_cluster):
+
+    count = 0
+
+    for i in w_cluster:
+
+        bin_index = np.where((w_all[:, 0] == i[0]) &
+                             (w_all[:, 1] == i[1]) &
+                             (w_all[:, 2] == i[2]))[0]
+
+        count = count + len(bin_index)
+
+    return count
+
+
+def water_counter_aa(w_all, w_cluster, oxy_pos):
+
+    count = 0
+
+    for i in w_cluster:
+
+        bin_index = np.where((w_all[:, 0] == w_cluster[i][0]) &
+                             (w_all[:, 1] == w_cluster[i][1]) &
+                             (w_all[:, 2] == w_cluster[i][2]))[0]
+        for index in bin_index:
+            condition = (index-oxy_pos)/3
+            if condition.is_integer():
+                count = count + 1
+
+    return count
+
+
 class Identifier():
     """
     Selecting water particles to be removed or replaced. these particles are
@@ -32,14 +64,12 @@ class Identifier():
                  bin_clusters,
                  box_dim,
                  bin_size,
-                 nr_remove,
                  water):
 
         self.bin_clusters = bin_clusters
         self.box_dim = box_dim
         self.bin_size = bin_size
         self.nr_bins = [int(x/self.bin_size) for x in self.box_dim]
-        self.nr_remove = nr_remove
         self.water = water
 
     def cluster_selecter(self):
@@ -98,7 +128,7 @@ class Identifier():
                     i[pos] = self.nr_bins[pos] + i[pos]
         return bins
 
-    def index_finder_m(self, w_all, w_cluster):
+    def index_finder_m(self, w_all, w_cluster, nr_remove):
         """
         Finds the indices of the clustered water bins 'w_cluster' in the
         complete list of water bins 'w_all'. The search continues until the
@@ -120,7 +150,7 @@ class Identifier():
         """
         indices = []
 
-        while len(indices) < self.nr_remove:
+        while len(indices) < nr_remove:
 
             i = random.randint(0, len(w_cluster)-1)
             bin_index = np.where((w_all[:, 0] == w_cluster[i][0]) &
@@ -134,9 +164,9 @@ class Identifier():
                 if global_index not in indices:
                     indices.append(int(global_index))
 
-        return indices[:self.nr_remove]
+        return indices[:nr_remove]
 
-    def index_finder_m_aa(self, w_all, w_cluster, oxy_pos):
+    def index_finder_m_aa(self, w_all, w_cluster, oxy_pos, nr_remove):
         """
         Finds the indices of the clustered water bins 'w_cluster' in the
         complete list of water bins 'w_all'. The search continues until the
@@ -162,7 +192,7 @@ class Identifier():
         """
         indices = []
 
-        while len(indices) < self.nr_remove:
+        while len(indices) < nr_remove:
 
             i = random.randint(0, len(w_cluster)-1)
             bin_index = np.where((w_all[:, 0] == w_cluster[i][0]) &
@@ -174,4 +204,4 @@ class Identifier():
                     global_index = self.water[index].index
                     indices.append(int(global_index))
 
-        return indices[:self.nr_remove]
+        return indices[:nr_remove]

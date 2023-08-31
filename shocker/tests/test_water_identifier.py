@@ -26,13 +26,11 @@ def identifier_object():
     tj = universe.trajectory[0]
     box_dim = tj.dimensions
     bin_size = 10
-    nr_remove = 10
     water = universe.select_atoms('resname W')
 
     kwargs = {"bin_clusters": bin_clusters,
               "box_dim": box_dim,
               "bin_size": bin_size,
-              "nr_remove": nr_remove,
               "water": water}
 
     return Identifier(**kwargs)
@@ -66,6 +64,8 @@ def test_bin_converter_w(identifier_object):
 
 def test_index_finder_m(identifier_object):
 
+    nr_remove = 10
+
     cluster_bins = np.array([[1, 2, 3], [3, 2, 1],
                              [5, 4, 5], [4, 4, 4],
                              [7, 3, 4], [6, 5, 4]])
@@ -81,14 +81,16 @@ def test_index_finder_m(identifier_object):
               100618, 100621, 100623,
               100616]
 
-    function_result = identifier_object.index_finder_m(all_bins, cluster_bins)
+    function_result = identifier_object.index_finder_m(all_bins, cluster_bins, nr_remove)
 
-    assert len(function_result) == identifier_object.nr_remove
+    assert len(function_result) == nr_remove
     for i in function_result:
         assert i in result
 
 
 def test_index_finder_m_aa(identifier_object):
+
+    nr_remove = 10
 
     cluster_bins = np.array([[1, 2, 3], [3, 2, 1],
                              [5, 4, 5], [4, 4, 4],
@@ -107,8 +109,9 @@ def test_index_finder_m_aa(identifier_object):
 
     function_result = identifier_object.index_finder_m_aa(all_bins,
                                                           cluster_bins,
-                                                          oxy_pos)
+                                                          oxy_pos,
+                                                          nr_remove)
 
-    assert len(function_result) == identifier_object.nr_remove
+    assert len(function_result) == nr_remove
     for i in function_result:
         assert i in result

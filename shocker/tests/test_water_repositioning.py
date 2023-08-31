@@ -60,6 +60,7 @@ def mover_object():
     box_dim = [40, 40, 40]
     nr_removed = 5
     all_bins = bin_converter(all_atoms.positions)
+    search_volume = 3
 
     water_group = universe.select_atoms('resname W')
 
@@ -69,7 +70,8 @@ def mover_object():
               "nr_removed": nr_removed,
               "box_dim": box_dim,
               "all_bins": all_bins,
-              "water_group": water_group}
+              "water_group": water_group,
+              "search_volume": search_volume}
 
     return Mover(**kwargs)
 
@@ -95,6 +97,7 @@ def mover_object_aa():
     box_dim = [10, 10, 23]
     nr_removed = 5
     all_bins = bin_converter(all_atoms.positions)
+    search_volume = 3
 
     water_group = universe.select_atoms('resname TIP3')
 
@@ -104,7 +107,8 @@ def mover_object_aa():
               "nr_removed": nr_removed,
               "box_dim": box_dim,
               "all_bins": all_bins,
-              "water_group": water_group}
+              "water_group": water_group,
+              "search_volume": search_volume}
 
     return Mover(**kwargs)
 

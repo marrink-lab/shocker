@@ -276,15 +276,15 @@ class VolArea():
         outer = leaflets.groups(0).positions
         inner = leaflets.groups(1).positions
 
-        if len(leaflets.groups()) > 2:
+        # if len(leaflets.groups()) > 2:
 
-            pointcloud = self.boundary_corrector()
-            leaflets = MDAnalysis.analysis.leaflet.LeafletFinder(
-                pointcloud,
-                self.selection)
+        #     pointcloud = self.boundary_corrector()
+        #     leaflets = MDAnalysis.analysis.leaflet.LeafletFinder(
+        #         pointcloud,
+        #         self.selection)
 
-            outer = leaflets.groups(0).positions
-            inner = leaflets.groups(1).positions
+        #     outer = leaflets.groups(0).positions
+        #     inner = leaflets.groups(1).positions
 
         result = None
         while result is None:

@@ -93,7 +93,7 @@ def areavolume_object():
 def test_volume_area(areavolume_object):
 
     result_area_in = 2282
-    result_area_out = 3597
+    result_area_out = 3550
     result_volume = 8673
 
     vesicle_data = areavolume_object.volume_area()

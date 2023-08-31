@@ -1,0 +1,16 @@
+#include "martini_v3.0.4.itp"
+#include "martini_v3.0_CDLs.itp"
+#include "martini_v3.0_ions.itp"
+#include "martini_v3.0_phospholipids.itp"
+#include "martini_v3.0_solvents.itp"
+
+ 
+[ system ] 
+
+Expect a large membrane 
+
+[ molecules ] 
+
+POPC  1797     
+POPC  603     
+W 155226

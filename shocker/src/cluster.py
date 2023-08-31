@@ -133,7 +133,7 @@ class Cluster():
 
         return bsystem
 
-    def neighbor_view(self, direction, bin_system, storage, cur):
+    def neighbor_view(self, direction, bin_system, storage, hydration_barrier, cur):
         """
         Of a given bin-system 'system' containing zeros and ones this function
         looks in a particular 'direction' relative to a bin 'cur'. If the
@@ -172,6 +172,19 @@ class Cluster():
                                 cur[1] + y_dir,
                                 cur[2] + z_dir))
                 bin_system[cur[0] + x_dir][cur[1] + y_dir][cur[2] + z_dir] = -1
+            elif bin_system[cur[0] + x_dir][cur[1] + y_dir][cur[2] + z_dir] == 1:
+                hydration_barrier.append((cur[0] + x_dir,
+                                          cur[1] + y_dir,
+                                          cur[2] + z_dir))
+
+        if (sign < 0 and cur[axis] > 1) or\
+                (sign > 0 and cur[axis] < self.nr_bins[axis] - 2):
+
+            if bin_system[cur[0] + (x_dir*2)][cur[1] + (y_dir*2)][cur[2] + (z_dir*2)] == 1:
+
+                hydration_barrier.append((cur[0] + (x_dir*2),
+                                          cur[1] + (y_dir*2),
+                                          cur[2] + (z_dir*2)))
 
     def cluster_finder(self, bin_system):
         """
@@ -199,6 +212,7 @@ class Cluster():
                       (0, 0, -1)]
         black_list = bin_system
         cluster_list = []
+        hb_cluster_list = []
 
         while zero_finder(black_list) != 0:
 
@@ -207,13 +221,14 @@ class Cluster():
             gray_list = [next_start]
             white_list = []
             temp_list = []
-
+            hb = []
             while len(gray_list) > 0:
                 for zero in gray_list:
                     for direction in directions:
                         self.neighbor_view(direction,
                                            black_list,
                                            temp_list,
+                                           hb,
                                            zero)
 
                     white_list.append(zero)
@@ -221,6 +236,8 @@ class Cluster():
 
                 gray_list = temp_list
                 temp_list = []
+            hb_list = white_list + hb
             cluster_list.append(white_list)
+            hb_cluster_list.append(hb_list)
 
-        return cluster_list
+        return cluster_list, hb_cluster_list
