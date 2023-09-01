@@ -13,11 +13,7 @@ Create virtual environment
 
 ```python3 -m venv venv```
 
-On Peregrine and Snellius load python module
-
-Peregrine
-
-```module load Python/3.8.6-GCCcore-10.2.0```
+On Snellius load python module
 
 Snellius
 ```
