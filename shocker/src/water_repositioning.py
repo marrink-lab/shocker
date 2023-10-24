@@ -95,7 +95,6 @@ class Mover():
         array containing the bins water particles are moved to
         """
         cluster_length = len(self.receiving_cluster)
-        print(cluster_length)
         chosen_bins = []
         best_not_w_count = 0
         best_bin = 0
@@ -158,7 +157,6 @@ class Mover():
         placement_pos = []
 
         for b in chosen_bins:
-            print(b)
             counter = 1
             found = []
             while counter <= multimeter:
@@ -207,7 +205,6 @@ class Mover():
                 counter = counter + 1
 
                 sum_min_dist = sum_min_dist + cur_min
-                print(best_pos)
                 placement_pos.append(best_pos)
                 found.append(best_pos)
 

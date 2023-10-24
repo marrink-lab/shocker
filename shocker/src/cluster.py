@@ -136,9 +136,9 @@ class Cluster():
     def neighbor_view(self, direction, bin_system, storage, hydration_barrier, cur):
         """
         Of a given bin-system 'system' containing zeros and ones this function
-        looks in a particular 'direction' relative to a bin 'cur'. If the
-        neighboring bin contains a zero the value is changed to -1. the
-        position of the zero is stored.
+        looks in a particular 'direction' to a 'target' bin relative to the 
+        bin 'cur'. If the neighboring bin contains a zero the value is changed 
+        to -1. the position of the zero is stored.
 
         Parameters
         ----------

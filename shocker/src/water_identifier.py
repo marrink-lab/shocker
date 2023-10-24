@@ -74,9 +74,9 @@ class Identifier():
 
     def cluster_selecter(self):
         """
-        From a list of water clusters the relevant cluster is selected (vesicle
-        interior). This is the cluster that does not include bin (0,0,0)
-        and the bin in furthest corner from (0,0,0).
+        From a list of water clusters the inner and outer clusters are
+        distinguished. The outer cluster is the one that contains the most
+        corner bins.
 
         Returns:
         --------
@@ -103,11 +103,11 @@ class Identifier():
             if count > max_count:
                 max_count = count
                 ind = i
-
         outer_cluster = self.bin_clusters[ind]
+
         self.bin_clusters.pop(ind)
-        for i in self.bin_clusters:
-            inner_cluster = inner_cluster + i
+        self.bin_clusters.sort(key=len)
+        inner_cluster = self.bin_clusters[-1]
 
         return inner_cluster, outer_cluster
 
