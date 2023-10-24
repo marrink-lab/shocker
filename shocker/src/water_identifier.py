@@ -83,17 +83,31 @@ class Identifier():
         array (x,3), a list of positions of the desired cluster of bins
         """
         inner_cluster = []
-        outer_cluster = []
 
+        corners = [(0, 0, 0),
+                   (self.nr_bins[0]-1, self.nr_bins[1]-1, self.nr_bins[2]-1),
+                   (self.nr_bins[0]-1, 0, 0),
+                   (0, self.nr_bins[1]-1, 0),
+                   (0, 0, self.nr_bins[2]-1),
+                   (self.nr_bins[0]-1, self.nr_bins[1]-1, 0),
+                   (0, self.nr_bins[1]-1, self.nr_bins[2]-1),
+                   (self.nr_bins[0]-1, self.nr_bins[1]-1, self.nr_bins[2]-1)]
+
+        max_count = 0
+        ind = 0
         for i, _ in enumerate(self.bin_clusters):
-            if (0, 0, 0) not in self.bin_clusters[i] and \
-                (self.nr_bins[0]-1,
-                 self.nr_bins[1]-1,
-                 self.nr_bins[2]-1) not in self.bin_clusters[i]:
+            count = 0
+            for corner in corners:
+                if corner in self.bin_clusters[i]:
+                    count = count + 1
+            if count > max_count:
+                max_count = count
+                ind = i
 
-                inner_cluster = inner_cluster + self.bin_clusters[i]
-            else:
-                outer_cluster = outer_cluster + self.bin_clusters[i]
+        outer_cluster = self.bin_clusters[ind]
+        self.bin_clusters.pop(ind)
+        for i in self.bin_clusters:
+            inner_cluster = inner_cluster + i
 
         return inner_cluster, outer_cluster
 

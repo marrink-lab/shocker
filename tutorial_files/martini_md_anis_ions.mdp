@@ -90,9 +90,9 @@ rvdw                     = 1.1
 
 ; Temperature coupling is on
 tcoupl                   = v-rescale 
-tc-grps                  = membrane water
-tau_t                    = 1.0 1.0
-ref_t                    = 310 310 
+tc-grps                  = membrane water ions
+tau_t                    = 1.0 1.0 1.0 
+ref_t                    = 310 310 310 
 
 
 ; Pressure coupling is off
