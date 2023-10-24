@@ -51,7 +51,7 @@ When the process is finished the simulation directory contains a folder called '
 ## Example 2: Shape analysis during hypertonic shock on a vesicle
 The Shocker package contains a few analysis methods that enables the user to monitor the shape of a vesicle over the course of the osmotic shock simulation. In this case we consider a simulation box containing a vesicle in a solvent with ions. The simulation and data calculation is executed with the following command:
 ```
-shocker -c POPC_ion.gro -f martini_md_anis.mdp -p topol_ion.top -r 200 -e 200 -n index_ion.ndx -vd yes -i yes
+shocker -c POPC_ion.gro -f martini_md_anis_ions.mdp -p topol_ion.top -r 200 -e 200 -n index_ion.ndx -vd yes -i yes
 ```
 (-vd) indicates if vesicle data should be calculated  
 (-i) indicates the presence of ions  
