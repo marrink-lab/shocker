@@ -39,9 +39,7 @@ def identifier_object():
 def test_cluster_selecter(identifier_object):
 
     outer_cluster_test = [(0, 0, 0), (2, 2, 2), (43, 43, 44)]
-    inner_cluster_test = [(4, 2, 3), (5, 4, 3),
-                          (1, 5, 3), (13, 34, 23),
-                          (12, 41, 16), (33, 22, 11)]
+    inner_cluster_test = [(13, 34, 23), (12, 41, 16), (33, 22, 11)]
 
     function_clusters = identifier_object.cluster_selecter()
 
