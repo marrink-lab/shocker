@@ -136,9 +136,9 @@ class Cluster():
     def neighbor_view(self, direction, bin_system, storage, hydration_barrier, cur):
         """
         Of a given bin-system 'system' containing zeros and ones this function
-        looks in a particular 'direction' relative to a bin 'cur'. If the
-        neighboring bin contains a zero the value is changed to -1. the
-        position of the zero is stored.
+        looks in a particular 'direction' to a 'target' bin relative to the 
+        bin 'cur'. If the neighboring bin contains a zero the value is changed 
+        to -1. the position of the zero is stored.
 
         Parameters
         ----------
@@ -160,31 +160,20 @@ class Cluster():
         y_dir = direction[1]
         z_dir = direction[2]
 
-        abs_values = [abs(i) for i in direction]
-        axis = abs_values.index(1)
-        sign = sum(direction)
+        target = [cur[0] + x_dir, cur[1] + y_dir, cur[2] + z_dir]
 
-        if (sign < 0 and cur[axis] > 0) or\
-                (sign > 0 and cur[axis] < self.nr_bins[axis] - 1):
+        for i in range(3):
+            if target[i] >= self.nr_bins[i]:
+                target[i] = target[i] - self.nr_bins[i]
+            if target[i] < 0:
+                target[i] = target[i] + self.nr_bins[i]
 
-            if bin_system[cur[0] + x_dir][cur[1] + y_dir][cur[2] + z_dir] == 0:
-                storage.append((cur[0] + x_dir,
-                                cur[1] + y_dir,
-                                cur[2] + z_dir))
-                bin_system[cur[0] + x_dir][cur[1] + y_dir][cur[2] + z_dir] = -1
-            elif bin_system[cur[0] + x_dir][cur[1] + y_dir][cur[2] + z_dir] == 1:
-                hydration_barrier.append((cur[0] + x_dir,
-                                          cur[1] + y_dir,
-                                          cur[2] + z_dir))
+        if bin_system[target[0]][target[1]][target[2]] == 0:
+            storage.append(tuple(target))
+            bin_system[target[0]][target[1]][target[2]] = -1
 
-        if (sign < 0 and cur[axis] > 1) or\
-                (sign > 0 and cur[axis] < self.nr_bins[axis] - 2):
-
-            if bin_system[cur[0] + (x_dir*2)][cur[1] + (y_dir*2)][cur[2] + (z_dir*2)] == 1:
-
-                hydration_barrier.append((cur[0] + (x_dir*2),
-                                          cur[1] + (y_dir*2),
-                                          cur[2] + (z_dir*2)))
+        elif bin_system[target[0]][target[1]][target[2]] == 1:
+            hydration_barrier.append(tuple(target))
 
     def cluster_finder(self, bin_system):
         """
