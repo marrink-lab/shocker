@@ -1,4 +1,5 @@
 # Shocker
+[![codecov](https://codecov.io/gh/marrink-lab/shocker/branch/Shocker/graph/badge.svg)](https://codecov.io/gh/marrink-lab/shocker)
 [![Build Status](https://github.com/marrink-lab/shocker/actions/workflows/python-ci.yml/badge.svg)](https://github.com/marrink-lab/shocker/actions)
 [![BioRxiv:10.1101/2023.08.16.553535](http://img.shields.io/badge/BioRxiv-10.1101/2023.08.16.553535-ad353a.svg)](https://doi.org/10.1101/2023.08.16.553535)
 [![JCTC:10.1021/acs.jctc.3c00961](http://img.shields.io/badge/JCTC-10.1021/acs.jctc.3c00961-007b42.svg)](https://doi.org/10.1021/acs.jctc.3c00961)
