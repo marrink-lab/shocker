@@ -31,10 +31,14 @@ jobs:
         pip install -r requirements-tests.txt
         
     - name: Run pytest with codecoverage
-      run: |
-        coverage run --source=shocker $(which pytest) -vv shocker
-        coverage report --omit='*/bin/pytest'
-        codecov
+      run:  pytest --cov polyply --cov-report=xml
+    - name: Upload coverage codecov   
+      uses: codecov/codecov-action@v3 
+      with:
+            token: ${{ secrets.CODECOV_TOKEN }}
+            files: ./coverage.xml
+            fail_ci_if_error: true
+            verbose: true
         
   lint:
     runs-on: ubuntu-latest

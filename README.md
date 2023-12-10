@@ -1,4 +1,10 @@
 # Shocker
+[![codecov](https://codecov.io/gh/marrink-lab/shocker/branch/Shocker/graph/badge.svg)](https://codecov.io/gh/marrink-lab/shocker)
+[![Build Status](https://github.com/marrink-lab/shocker/actions/workflows/python-ci.yml/badge.svg)](https://github.com/marrink-lab/shocker/actions)
+[![BioRxiv:10.1101/2023.08.16.553535](http://img.shields.io/badge/BioRxiv-10.1101/2023.08.16.553535-ad353a.svg)](https://doi.org/10.1101/2023.08.16.553535)
+[![JCTC:10.1021/acs.jctc.3c00961](http://img.shields.io/badge/JCTC-10.1021/acs.jctc.3c00961-007b42.svg)](https://doi.org/10.1021/acs.jctc.3c00961)
+![license](https://img.shields.io/github/license/marrink-lab/shocker)
+
 Shocker is a python package for simulating the effects of water efflux (influx) during a hypertonic (hypotonic) osmotic shock by relocating water particles from the inner to the outer compartment (or vice versa). The algortihm can be applied to any structure containing an enclosed compartment of solvent such as a vesicle, tube or double bilayer system. The tool works with the md code GROMACS and can be applied to both AA systems and CG systems. Shocker is applicable to membranes containing proteins and other molecules such as polymers and DNA. Shocker divides the simulation in pumping cycles, defined as relocation of a number of water particles followed by relaxation time.
 
 # Instructions
